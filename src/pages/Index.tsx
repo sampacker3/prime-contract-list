@@ -74,6 +74,129 @@ const steps = [
   },
 ];
 
+const SAMPLE_CONTRACTS = [
+  { title: "Senior React Developer", company: "FinTech Solutions Ltd", rate: "£650/day", location: "London (Remote)", desc: "We are looking for an experienced React developer to join our growing team to help build next-generation financial dashboards..." },
+  { title: "Python Data Engineer", company: "Lloyds Banking Group", rate: "£550/day", location: "Edinburgh / Hybrid", desc: "Seeking a skilled Python data engineer to design and maintain large-scale data pipelines using Apache Spark and Kafka..." },
+  { title: "DevOps Engineer (AWS)", company: "CloudCore Systems", rate: "£700/day", location: "Manchester (Remote)", desc: "We need a DevOps engineer with strong AWS experience to own our CI/CD infrastructure and help migrate legacy services..." },
+  { title: "Java Backend Contractor", company: "HSBC Technology", rate: "£600/day", location: "Canary Wharf / Hybrid", desc: "Join a cross-functional squad delivering high-throughput payment processing services built on Java 17 and Spring Boot..." },
+  { title: "Scrum Master / Agile Coach", company: "Nationwide Building Society", rate: "£500/day", location: "Swindon (Hybrid)", desc: "Looking for an experienced Scrum Master to lead two delivery squads through an exciting digital transformation programme..." },
+  { title: "Full Stack TypeScript Dev", company: "GovTech Innovations", rate: "£575/day", location: "Remote (UK)", desc: "Help us build citizen-facing services using Node.js, React and PostgreSQL. SC clearance eligible candidates preferred..." },
+  { title: "Cloud Architect (Azure)", company: "Vodafone Group", rate: "£800/day", location: "Newbury / Remote", desc: "Define and own the Azure cloud strategy for a major network modernisation programme affecting millions of customers..." },
+  { title: "iOS Swift Developer", company: "Starling Bank", rate: "£650/day", location: "London (Hybrid)", desc: "Join our mobile team building award-winning banking features for our iOS app used by over 3 million customers daily..." },
+  { title: "Business Analyst (Finance)", company: "Barclays Capital", rate: "£525/day", location: "London (Hybrid)", desc: "Support delivery of regulatory change programmes across fixed income and derivatives with strong stakeholder engagement..." },
+  { title: "Golang Microservices Dev", company: "Deliveroo Engineering", rate: "£680/day", location: "London / Remote", desc: "Build and scale high-performance microservices in Go that handle millions of order events per day across our platform..." },
+  { title: "SAP S/4HANA Consultant", company: "Tata Consultancy Services", rate: "£725/day", location: "Birmingham (Hybrid)", desc: "Drive SAP S/4HANA implementation for a major UK retail client, covering finance and supply chain modules end-to-end..." },
+  { title: "Security Engineer (SOC)", company: "BAE Systems Digital", rate: "£600/day", location: "Guildford (SC Cleared)", desc: "Work within a 24/7 security operations centre detecting, triaging and responding to threats across defence networks..." },
+  { title: "Machine Learning Engineer", company: "Rolls-Royce R2 Data Labs", rate: "£750/day", location: "Derby / Remote", desc: "Apply ML to predictive maintenance problems on jet engine telemetry data — Python, PyTorch and MLflow environment..." },
+  { title: "Salesforce CRM Developer", company: "BT Group", rate: "£500/day", location: "London (Hybrid)", desc: "Develop and maintain Salesforce Sales Cloud and Service Cloud solutions for BT's enterprise B2B customer portfolio..." },
+  { title: "Network Engineer (CCNP)", company: "Virgin Media O2", rate: "£475/day", location: "Reading (On-site)", desc: "Responsible for the design, implementation and troubleshooting of core network infrastructure supporting our 5G rollout..." },
+  { title: "UX / Product Designer", company: "Monzo Bank", rate: "£550/day", location: "London / Remote", desc: "Shape the future of personal finance by designing intuitive, beautiful experiences for Monzo's 9 million UK customers..." },
+];
+
+function ContractCard({ contract }: { contract: typeof SAMPLE_CONTRACTS[0] }) {
+  return (
+    <div className="w-64 shrink-0 rounded-xl border bg-card p-4 shadow-sm select-none">
+      <p className="font-heading font-semibold text-sm text-foreground leading-snug line-clamp-2 mb-2">
+        {contract.title}
+      </p>
+      <div className="space-y-0.5 mb-3 opacity-50">
+        <p className="text-xs text-muted-foreground truncate">{contract.company}</p>
+        <div className="flex gap-2 text-xs text-muted-foreground">
+          <span className="font-medium text-primary/70">{contract.rate}</span>
+          <span>·</span>
+          <span className="truncate">{contract.location}</span>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground line-clamp-3 opacity-30 blur-[2px] select-none pointer-events-none">
+        {contract.desc}
+      </p>
+      <div className="mt-3 flex items-center gap-1 text-xs text-primary/60 font-medium">
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
+        Sign up to view
+      </div>
+    </div>
+  );
+}
+
+function ContractMarquee() {
+  const half = Math.ceil(SAMPLE_CONTRACTS.length / 2);
+  const row1 = SAMPLE_CONTRACTS.slice(0, half);
+  const row2 = SAMPLE_CONTRACTS.slice(half);
+  return (
+    <section className="py-16 md:py-20 overflow-hidden bg-background border-b">
+      <div className="container mb-10 text-center">
+        <div className="inline-flex items-center gap-2 mb-2">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_6px_2px_rgba(239,68,68,0.6)]" />
+          </span>
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary">Live Contracts</p>
+        </div>
+        <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
+          Get notified on the latest contracts before anyone else
+        </h2>
+        <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+          Sign up to unlock full details, rates, and one-click applications.
+        </p>
+      </div>
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-background to-transparent" />
+        <div className="flex gap-4 mb-4" style={{ animation: "marquee-left 40s linear infinite", width: "max-content" }}>
+          {[...row1, ...row1, ...row1].map((c, i) => <ContractCard key={i} contract={c} />)}
+        </div>
+        <div className="flex gap-4" style={{ animation: "marquee-right 48s linear infinite", width: "max-content" }}>
+          {[...row2, ...row2, ...row2].map((c, i) => <ContractCard key={i} contract={c} />)}
+        </div>
+      </div>
+      <style>{`
+        @keyframes marquee-left {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-33.333%); }
+        }
+        @keyframes marquee-right {
+          0%   { transform: translateX(-33.333%); }
+          100% { transform: translateX(0); }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+function StatCounter({ target, prefix = "", suffix = "", duration = 1800 }: {
+  target: number; prefix?: string; suffix?: string; duration?: number;
+}) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          const start = performance.now();
+          const tick = (now: number) => {
+            const raw = Math.min((now - start) / duration, 1);
+            // ease-out cubic
+            const progress = 1 - Math.pow(1 - raw, 3);
+            setCount(Math.floor(progress * target));
+            if (raw < 1) requestAnimationFrame(tick);
+            else setCount(target);
+          };
+          requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  const formatted = count.toLocaleString("en-GB");
+  return <span ref={ref}>{prefix}{formatted}{suffix}</span>;
+}
+
 function StepItem({ step, index, isLast }: { step: typeof steps[0]; index: number; isLast: boolean }) {
   const { ref, visible } = useScrollReveal();
   return (
@@ -145,10 +268,10 @@ const Index = () => {
       <Navbar />
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden pb-10">
         <div className="absolute inset-0 bg-surface-subtle" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(217_91%_50%/0.08),transparent_60%)]" />
-        <div className="container relative py-24 md:py-36 lg:py-44">
+        <div className="container relative pt-16 pb-8 md:pt-24 md:pb-8">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-4">
               The UK's #1 Contract Search Engine
@@ -180,24 +303,60 @@ const Index = () => {
             {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
           </div>
         </div>
+
+        {/* Skills ticker — full width inside hero */}
+        <div className="relative overflow-hidden mt-8">
+          <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-[hsl(214,100%,97%)] to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-[hsl(214,100%,97%)] to-transparent" />
+          <div
+            className="flex gap-3"
+            style={{ animation: "marquee-left 35s linear infinite", width: "max-content" }}
+          >
+            {[
+              "Python", "MLOps", "Machine Learning", "AI / LLMs", "Data Engineer", "BI Developer",
+              "Network Engineer", "Solutions Architect", "Java", "C++", "Ruby", "Liquid", "GCP",
+              "AWS", "Azure", "SQL", "DevOps", "Kubernetes", "Terraform", "React", "TypeScript",
+              "Node.js", "Golang", "Rust", "Scala", "Spark", "Kafka", "Snowflake", "dbt",
+              "Power BI", "Tableau", "Salesforce", "SAP", "iOS / Swift", "Android / Kotlin",
+              "Cyber Security", "Penetration Testing", "Cloud Architecture", "Site Reliability",
+              "Python", "MLOps", "Machine Learning", "AI / LLMs", "Data Engineer", "BI Developer",
+              "Network Engineer", "Solutions Architect", "Java", "C++", "Ruby", "Liquid", "GCP",
+              "AWS", "Azure", "SQL", "DevOps", "Kubernetes", "Terraform", "React", "TypeScript",
+              "Node.js", "Golang", "Rust", "Scala", "Spark", "Kafka", "Snowflake", "dbt",
+              "Power BI", "Tableau", "Salesforce", "SAP", "iOS / Swift", "Android / Kotlin",
+              "Cyber Security", "Penetration Testing", "Cloud Architecture", "Site Reliability",
+            ].map((skill, i) => (
+              <span
+                key={i}
+                className="shrink-0 rounded-full border bg-accent px-4 py-1.5 text-xs font-medium text-foreground/80 whitespace-nowrap"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+          </div>
+        </div>
       </section>
 
       {/* Stats bar */}
       <section className="border-y bg-background">
         <div className="container py-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
-            { value: "12,400+", label: "Active Contracts" },
-            { value: "500+", label: "Sources Scraped" },
-            { value: "< 5 min", label: "Listing Delay" },
-            { value: "8,200+", label: "Happy Users" },
+            { node: <StatCounter target={12400} suffix="+" />, label: "Active Contracts" },
+            { node: <StatCounter target={500} suffix="+" />, label: "Sources Scraped" },
+            { node: <>{"< 5 min"}</>, label: "Listing Delay" },
+            { node: <StatCounter target={8200} suffix="+" />, label: "Happy Users" },
           ].map((stat) => (
             <div key={stat.label}>
-              <p className="text-2xl md:text-3xl font-heading font-bold text-foreground">{stat.value}</p>
+              <p className="text-2xl md:text-3xl font-heading font-bold text-foreground">{stat.node}</p>
               <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
             </div>
           ))}
         </div>
       </section>
+
+      <ContractMarquee />
 
       {/* How it works */}
       <section className="container py-20 md:py-28">
