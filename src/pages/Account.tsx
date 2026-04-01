@@ -1,12 +1,113 @@
-import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle, LogOut, FileText, Upload, Trash2, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import SEO from "@/components/SEO";
+import { supabase } from "@/lib/supabase";
+
+const CV_BUCKET = "cvs";
 
 const AccountPage = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [cvName, setCvName] = useState<string | null>(null);
+  const [cvUploading, setCvUploading] = useState(false);
+  const [cvDeleting, setCvDeleting] = useState(false);
+  const [cvError, setCvError] = useState<string | null>(null);
+
+  // Check storage directly for an existing CV — source of truth
+  useEffect(() => {
+    if (!user) return;
+    supabase.storage
+      .from(CV_BUCKET)
+      .list(user.id)
+      .then(({ data }) => {
+        const existing = data?.find((f) => f.name === "cv.pdf");
+        if (existing) {
+          // localStorage holds the original filename; storage confirms the file exists
+          const saved = localStorage.getItem(`cv_filename_${user.id}`);
+          setCvName(saved ?? "cv.pdf");
+        }
+      });
+  }, [user]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.type !== "application/pdf") {
+      setCvError("Only PDF files are accepted.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCvError("File must be under 5 MB.");
+      return;
+    }
+    setCvError(null);
+    setCvUploading(true);
+    try {
+      const path = `${user.id}/cv.pdf`;
+
+      // Remove existing file first so we only need INSERT policy (no UPDATE needed)
+      await supabase.storage.from(CV_BUCKET).remove([path]);
+
+      const { error: uploadError } = await supabase.storage
+        .from(CV_BUCKET)
+        .upload(path, file, { contentType: "application/pdf" });
+      if (uploadError) throw uploadError;
+
+      localStorage.setItem(`cv_filename_${user.id}`, file.name);
+      setCvName(file.name);
+    } catch (err: unknown) {
+      setCvError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setCvUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!user) return;
+    const { data } = await supabase.storage
+      .from(CV_BUCKET)
+      .createSignedUrl(`${user.id}/cv.pdf`, 60);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+    setCvDeleting(true);
+    try {
+      await supabase.storage.from(CV_BUCKET).remove([`${user.id}/cv.pdf`]);
+      localStorage.removeItem(`cv_filename_${user.id}`);
+      setCvName(null);
+    } finally {
+      setCvDeleting(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const memberSince = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString("en-GB", { month: "long", year: "numeric" })
+    : "—";
+
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO
+        title="My Account — ContractHub"
+        description="Manage your ContractHub account, subscription plan, and email preferences."
+        canonical="/account"
+        noIndex={true}
+      />
       <Navbar />
 
       <section className="border-b bg-surface-subtle">
@@ -17,6 +118,79 @@ const AccountPage = () => {
       </section>
 
       <section className="container py-8 flex-1 max-w-3xl space-y-6">
+        {/* CV Upload */}
+        <div className="rounded-xl border bg-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-heading font-semibold text-foreground">Your CV</h2>
+              <p className="text-sm text-muted-foreground">Upload a PDF — max 5 MB</p>
+            </div>
+          </div>
+
+          {cvName ? (
+            <div className="rounded-lg bg-accent/50 border p-4 flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <FileText className="h-5 w-5 text-primary shrink-0" />
+                <span className="text-sm font-medium text-foreground truncate">{cvName}</span>
+              </div>
+              <Badge variant="secondary" className="text-xs shrink-0">Uploaded</Badge>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed p-6 text-center mb-4">
+              <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No CV uploaded yet</p>
+            </div>
+          )}
+
+          {cvError && (
+            <p className="text-sm text-destructive mb-3">{cvError}</p>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={handleUpload}
+          />
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="hero"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={cvUploading}
+            >
+              {cvUploading
+                ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Uploading…</>
+                : <><Upload className="h-4 w-4 mr-1" /> {cvName ? "Replace CV" : "Upload CV"}</>
+              }
+            </Button>
+            {cvName && (
+              <>
+                <Button variant="outline" size="sm" onClick={handleDownload}>
+                  <Download className="h-4 w-4 mr-1" /> Download
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={handleDelete}
+                  disabled={cvDeleting}
+                >
+                  {cvDeleting
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <><Trash2 className="h-4 w-4 mr-1" /> Delete</>
+                  }
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+
         {/* Subscription card */}
         <div className="rounded-xl border bg-card p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -73,20 +247,21 @@ const AccountPage = () => {
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-sm text-muted-foreground">Email</span>
-              <span className="text-sm font-medium text-foreground">user@example.com</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-sm text-muted-foreground">Name</span>
-              <span className="text-sm font-medium text-foreground">John Smith</span>
+              <span className="text-sm font-medium text-foreground">{user?.email ?? "—"}</span>
             </div>
             <div className="flex justify-between items-center py-2">
               <span className="text-sm text-muted-foreground">Member since</span>
-              <span className="text-sm font-medium text-foreground">January 2026</span>
+              <span className="text-sm font-medium text-foreground">{memberSince}</span>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="mt-4">
-            <Settings className="h-4 w-4 mr-1" /> Edit Profile
-          </Button>
+          <div className="flex gap-2 mt-4">
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-1" /> Edit Profile
+            </Button>
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-1" /> Sign Out
+            </Button>
+          </div>
         </div>
 
         {/* Email Preferences */}

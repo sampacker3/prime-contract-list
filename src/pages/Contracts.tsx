@@ -1,49 +1,119 @@
 import { useState } from "react";
-import { Search, MapPin, Clock, PoundSterling, Filter, ChevronDown, ExternalLink, Bookmark } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, MapPin, Clock, Filter, ChevronDown, ExternalLink, Bookmark, Loader2, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { supabase } from "@/lib/supabase";
+import type { Contract } from "@/types/database";
+import SEO from "@/components/SEO";
+import { useSavedJobs } from "@/hooks/useSavedJobs";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
-// Mock contract data
-const mockContracts = [
-  { id: 1, title: "Azure Cloud Engineer", company: "Barclays", location: "London", rate: "£650/day", duration: "6 months", posted: "2 hours ago", tags: ["Azure", "DevOps", "Terraform"], remote: "Hybrid" },
-  { id: 2, title: "Senior Data Engineer", company: "HSBC", location: "Birmingham", rate: "£600/day", duration: "12 months", posted: "4 hours ago", tags: ["Python", "Spark", "Databricks"], remote: "Remote" },
-  { id: 3, title: "Python Developer", company: "Sky", location: "Leeds", rate: "£550/day", duration: "3 months", posted: "5 hours ago", tags: ["Python", "Django", "AWS"], remote: "On-site" },
-  { id: 4, title: "Microsoft Fabric Consultant", company: "Deloitte", location: "London", rate: "£700/day", duration: "6 months", posted: "6 hours ago", tags: ["Fabric", "Power BI", "Azure"], remote: "Hybrid" },
-  { id: 5, title: "IT Infrastructure Manager", company: "NHS Digital", location: "Manchester", rate: "£500/day", duration: "9 months", posted: "8 hours ago", tags: ["Networking", "Security", "ITIL"], remote: "On-site" },
-  { id: 6, title: "DevOps Engineer", company: "Vodafone", location: "London", rate: "£620/day", duration: "6 months", posted: "10 hours ago", tags: ["Kubernetes", "CI/CD", "AWS"], remote: "Remote" },
-  { id: 7, title: "Data Analyst - Power BI", company: "BT", location: "Bristol", rate: "£450/day", duration: "3 months", posted: "12 hours ago", tags: ["Power BI", "SQL", "DAX"], remote: "Hybrid" },
-  { id: 8, title: "Full Stack Developer", company: "Capita", location: "Glasgow", rate: "£530/day", duration: "6 months", posted: "1 day ago", tags: ["React", "Node.js", "TypeScript"], remote: "Remote" },
-];
+function useContracts(search: string, location: string) {
+  return useQuery({
+    queryKey: ["contracts", search, location],
+    queryFn: async () => {
+      let query = supabase
+        .from("LinkedinScrapeResults")
+        .select("*")
+        .order("PostedDate", { ascending: false })
+        .limit(50);
+
+      if (search) {
+        query = query.or(
+          `JobTitle.ilike.%${search}%,Description.ilike.%${search}%,Company.ilike.%${search}%`
+        );
+      }
+
+      if (location) {
+        query = query.ilike("Location", `%${location}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Contract[];
+    },
+  });
+}
+
+// PostedDate is a date-only field (no time). Use created_at for the full timestamp.
+function isToday(createdAt: string): boolean {
+  const date = new Date(createdAt);
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+function formatPostedDate(createdAt: string): string {
+  const date = new Date(createdAt);
+  const now = new Date();
+
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+
+  const timeStr = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  if (date >= todayStart) return `Today at ${timeStr}`;
+  if (date >= yesterdayStart) return `Yesterday at ${timeStr}`;
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
 
 const ContractsPage = () => {
+  const [searchInput, setSearchInput] = useState("");
+  const [locationInput, setLocationInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  const filtered = mockContracts.filter((c) => {
-    const matchesSearch = !searchTerm || c.title.toLowerCase().includes(searchTerm.toLowerCase()) || c.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesLocation = !locationFilter || c.location.toLowerCase().includes(locationFilter.toLowerCase());
-    return matchesSearch && matchesLocation;
-  });
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { savedJobIds, toggleSave } = useSavedJobs();
+  const { data: contracts = [], isLoading, isError } = useContracts(searchTerm, locationFilter);
+
+  const handleBookmark = (e: React.MouseEvent, jobId: number) => {
+    e.stopPropagation();
+    if (!user) { navigate("/login"); return; }
+    toggleSave.mutate(jobId);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSearchTerm(searchInput);
+    setLocationFilter(locationInput);
+  };
+
+  const toggleExpand = (id: number) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO
+        title="Browse IT Contracts — Find Your Next UK Contract Role"
+        description="Search thousands of IT contract roles across the UK. Filter by job title, location, technology stack, and more. Updated in real-time from hundreds of sources."
+        canonical="/contracts"
+      />
       <Navbar />
 
       {/* Search header */}
       <section className="border-b bg-surface-subtle">
         <div className="container py-8">
           <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground mb-6">Browse Contracts</h1>
-          <div className="flex flex-col md:flex-row gap-3">
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by title, skill or technology..."
                 className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
             </div>
             <div className="relative md:w-64">
@@ -51,14 +121,14 @@ const ContractsPage = () => {
               <Input
                 placeholder="Location..."
                 className="pl-10"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
               />
             </div>
-            <Button variant="hero">
+            <Button type="submit" variant="hero">
               <Search className="h-4 w-4 mr-1" /> Search
             </Button>
-          </div>
+          </form>
         </div>
       </section>
 
@@ -66,58 +136,124 @@ const ContractsPage = () => {
       <section className="container py-8 flex-1">
         <div className="flex items-center justify-between mb-6">
           <p className="text-sm text-muted-foreground">
-            Showing <span className="font-semibold text-foreground">{filtered.length}</span> contracts
+            {isLoading ? (
+              "Loading contracts..."
+            ) : (
+              <>Showing <span className="font-semibold text-foreground">{contracts.length}</span> contracts</>
+            )}
           </p>
           <Button variant="ghost" size="sm" className="text-muted-foreground">
             <Filter className="h-4 w-4 mr-1" /> More Filters <ChevronDown className="h-3 w-3 ml-1" />
           </Button>
         </div>
 
-        <div className="space-y-3">
-          {filtered.map((contract) => (
-            <div
-              key={contract.id}
-              className="group rounded-xl border bg-card p-5 transition-all hover:shadow-brand hover:border-primary/20 cursor-pointer"
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-heading font-semibold text-foreground truncate">{contract.title}</h3>
-                    <Badge variant="secondary" className="text-xs shrink-0">{contract.remote}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{contract.company}</p>
-                  <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{contract.location}</span>
-                    <span className="flex items-center gap-1"><PoundSterling className="h-3 w-3" />{contract.rate}</span>
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.duration}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {contract.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs bg-accent text-accent-foreground border-primary/10">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs text-muted-foreground">{contract.posted}</span>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {isLoading && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
 
-        {filtered.length === 0 && (
+        {isError && (
           <div className="text-center py-20">
-            <Search className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-            <p className="text-lg font-heading font-semibold text-foreground">No contracts found</p>
-            <p className="text-sm text-muted-foreground mt-1">Try adjusting your search terms</p>
+            <p className="text-lg font-heading font-semibold text-foreground">Failed to load contracts</p>
+            <p className="text-sm text-muted-foreground mt-1">Please try again later</p>
+          </div>
+        )}
+
+        {!isLoading && !isError && (
+          <div className="space-y-3">
+            {contracts.map((contract) => {
+              const postedToday = isToday(contract.created_at);
+              const expanded = expandedId === contract.id;
+
+              return (
+                <div
+                  key={contract.id}
+                  className="rounded-xl border bg-card transition-all hover:shadow-brand hover:border-primary/20"
+                >
+                  {/* Card header — always visible, click to expand */}
+                  <div
+                    className="p-5 cursor-pointer"
+                    onClick={() => toggleExpand(contract.id)}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-heading font-semibold text-foreground truncate">
+                            {contract.JobTitle ?? "Untitled Role"}
+                          </h3>
+                          {postedToday && (
+                            <Badge className="text-xs shrink-0 bg-green-500 hover:bg-green-500 text-white border-0">
+                              Posted Today
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{contract.Company ?? "Company not listed"}</p>
+                        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
+                          {contract.Location && (
+                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{contract.Location}</span>
+                          )}
+                          {contract.EmploymentType && (
+                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.EmploymentType}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs text-muted-foreground">
+                          {formatPostedDate(contract.created_at)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={savedJobIds.has(contract.id) ? "text-primary" : "text-muted-foreground hover:text-primary"}
+                          onClick={(e) => handleBookmark(e, contract.id)}
+                        >
+                          <Bookmark className={`h-4 w-4 ${savedJobIds.has(contract.id) ? "fill-current" : ""}`} />
+                        </Button>
+                        {contract.URL && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(contract.URL!, "_blank");
+                            }}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="text-muted-foreground">
+                          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expanded description */}
+                  {expanded && contract.Description && (
+                    <div className="px-5 pb-5 border-t pt-4">
+                      <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">
+                        {contract.Description}
+                      </p>
+                    </div>
+                  )}
+                  {expanded && !contract.Description && (
+                    <div className="px-5 pb-5 border-t pt-4">
+                      <p className="text-sm text-muted-foreground italic">No description available.</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {contracts.length === 0 && (
+              <div className="text-center py-20">
+                <Search className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+                <p className="text-lg font-heading font-semibold text-foreground">No contracts found</p>
+                <p className="text-sm text-muted-foreground mt-1">Try adjusting your search terms</p>
+              </div>
+            )}
           </div>
         )}
       </section>

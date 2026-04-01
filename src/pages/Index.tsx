@@ -1,36 +1,147 @@
-import { Link } from "react-router-dom";
-import { Search, ArrowRight, Briefcase, Mail, Zap } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import AuthModal from "@/components/AuthModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { Search, ArrowRight, Bell, FileText, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import RotatingText from "@/components/RotatingText";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 
-const features = [
+function useScrollReveal() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.2 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, visible };
+}
+
+function useCountUp(target: number, duration = 1800) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started.current) {
+          started.current = true;
+          const start = performance.now();
+          const tick = (now: number) => {
+            const progress = Math.min((now - start) / duration, 1);
+            setCount(Math.floor(progress * target));
+            if (progress < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  return { count, ref };
+}
+
+const steps = [
   {
     icon: Search,
-    title: "Hundreds of Sources",
+    title: "We search hundreds of businesses and recruiters for contracts",
     description: "We scrape contracts from hundreds of job boards and company sites so you don't have to.",
   },
   {
-    icon: Zap,
-    title: "Real-Time Updates",
-    description: "New contracts appear within minutes of being posted. Never miss an opportunity.",
+    icon: Bell,
+    title: "We notify you as soon as a relevant contract is posted",
+    description: "No more hunting and missing opportunities because you are too late.",
   },
   {
-    icon: Mail,
-    title: "Instant Email Alerts",
-    description: "Set your keywords and get notified the moment matching contracts are listed.",
+    icon: FileText,
+    title: "We draft a cover letter based on your CV and the selected contract",
+    description: "Create tailored applications every time, saving you time and improving your application.",
   },
   {
-    icon: Briefcase,
-    title: "Advanced Filtering",
-    description: "Filter by rate, location, duration, and technology stack to find your perfect contract.",
+    icon: Send,
+    title: "You apply to your ideal contract",
+    description: "That hard work has been done, all you need to do is apply with your custom cover letter to your contract early thanks to ContractHub.",
   },
 ];
 
+function StepItem({ step, index, isLast }: { step: typeof steps[0]; index: number; isLast: boolean }) {
+  const { ref, visible } = useScrollReveal();
+  return (
+    <div ref={ref}>
+      {/* Card */}
+      <div
+        className="rounded-xl border bg-card p-6 flex gap-5 items-start transition-all duration-700"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? "translateY(0)" : "translateY(24px)",
+          transitionDelay: `${index * 150}ms`,
+        }}
+      >
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-heading font-bold text-lg">
+          {index + 1}
+        </div>
+        <div className="flex-1">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary mb-3">
+            <step.icon className="h-5 w-5" />
+          </div>
+          <h3 className="font-heading font-semibold text-foreground text-lg leading-snug">{step.title}</h3>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{step.description}</p>
+        </div>
+      </div>
+
+      {/* Dotted connector between cards — ml-12 = p-6 (24px) + half circle (24px) */}
+      {!isLast && (
+        <div className="ml-12 py-1">
+          <div className="border-l-2 border-dashed border-primary/30 h-8" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 const Index = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { count, ref: countRef } = useCountUp(700);
+
+  const handleExplore = () => {
+    if (user) {
+      navigate("/contracts");
+    } else {
+      setShowAuthModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO
+        title="ContractHub — The UK's #1 IT Contract Search Engine"
+        description="Find your next IT contract in the UK. ContractHub aggregates thousands of contract roles from hundreds of sources, updated in real-time. Search by role, location, and rate."
+        canonical="/"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "name": "ContractHub",
+          "url": "https://contracthub.co.uk",
+          "description": "The UK's #1 IT contract search engine.",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://contracthub.co.uk/contracts?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }}
+      />
       <Navbar />
 
       {/* Hero */}
@@ -43,26 +154,30 @@ const Index = () => {
               The UK's #1 Contract Search Engine
             </p>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold leading-[1.1] text-foreground">
-              Find your next{" "}
-              <RotatingText />{" "}
-              <br className="hidden sm:block" />
+              Find your next<br />
+              <RotatingText /><br />
               contract now
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              We aggregate contracts from hundreds of sources so you can focus on landing your next role. Updated in real-time.
+              We pull contract opportunities from hundreds of websites every 10 mins ready for you to apply early with no hassle.
+            </p>
+            <p className="mt-6 text-2xl md:text-3xl font-heading font-bold text-foreground" ref={countRef}>
+              Over{" "}
+              <span className="text-primary underline decoration-primary decoration-2 underline-offset-4">
+                {count}
+              </span>
+              {" "}contracts in the past month
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Button variant="hero" size="lg" asChild>
-                <Link to="/contracts">
-                  Browse Contracts <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
+              <Button variant="hero" size="lg" onClick={handleExplore}>
+                Explore Contracts <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
-              <Button variant="hero-outline" size="lg" asChild>
-                <Link to="/alerts">
-                  Set Up Alerts <Mail className="ml-1 h-4 w-4" />
-                </Link>
+              <Button variant="hero-outline" size="lg" onClick={() => setShowAuthModal(true)}>
+                Log In <ArrowRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
+
+            {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
           </div>
         </div>
       </section>
@@ -84,28 +199,21 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features */}
+      {/* How it works */}
       <section className="container py-20 md:py-28">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">
-            Everything you need to find contracts
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <h2 className="text-3xl md:text-5xl font-heading font-bold text-foreground">
+            The one site to find contracts —{" "}
+            <span className="text-primary underline decoration-primary underline-offset-4">now</span>
           </h2>
           <p className="mt-4 text-muted-foreground text-lg">
-            Stop wasting hours searching multiple sites. We do the heavy lifting.
+            Applying early is key to landing contracts, we've got your back.
           </p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="group rounded-xl border bg-card p-6 transition-all hover:shadow-brand hover:border-primary/20"
-            >
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-accent text-primary">
-                <feature.icon className="h-5 w-5" />
-              </div>
-              <h3 className="font-heading font-semibold text-foreground">{feature.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-            </div>
+
+        <div className="max-w-2xl mx-auto">
+          {steps.map((step, i) => (
+            <StepItem key={step.title} step={step} index={i} isLast={i === steps.length - 1} />
           ))}
         </div>
       </section>

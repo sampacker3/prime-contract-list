@@ -5,6 +5,7 @@ import { useState } from "react";
 
 const navLinks = [
   { label: "Browse Contracts", to: "/contracts" },
+  { label: "Saved", to: "/saved" },
   { label: "Email Alerts", to: "/alerts" },
   { label: "My Account", to: "/account" },
 ];
