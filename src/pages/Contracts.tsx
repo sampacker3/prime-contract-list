@@ -11,7 +11,7 @@ import type { Contract } from "@/types/database";
 import SEO from "@/components/SEO";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 function useContracts(search: string, location: string) {
   return useQuery({
@@ -20,7 +20,7 @@ function useContracts(search: string, location: string) {
       let query = supabase
         .from("LinkedinScrapeResults")
         .select("*")
-        .order("PostedDate", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(50);
 
       if (search) {
@@ -38,6 +38,20 @@ function useContracts(search: string, location: string) {
       return data as Contract[];
     },
   });
+}
+
+function scoreRelevance(contract: Contract, term: string): number {
+  if (!term) return 0;
+  const t = term.toLowerCase();
+  const title = (contract.JobTitle ?? "").toLowerCase();
+  const company = (contract.Company ?? "").toLowerCase();
+  const desc = (contract.Description ?? "").toLowerCase();
+  if (title === t) return 3;
+  if (title.startsWith(t)) return 2.5;
+  if (title.includes(t)) return 2;
+  if (company.includes(t)) return 1.5;
+  if (desc.includes(t)) return 1;
+  return 0;
 }
 
 // PostedDate is a date-only field (no time). Use created_at for the full timestamp.
@@ -66,16 +80,23 @@ function formatPostedDate(createdAt: string): string {
 }
 
 const ContractsPage = () => {
-  const [searchInput, setSearchInput] = useState("");
+  const [searchParams] = useSearchParams();
+  const initialQ = searchParams.get("q") ?? "";
+  const [searchInput, setSearchInput] = useState(initialQ);
   const [locationInput, setLocationInput] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(initialQ);
   const [locationFilter, setLocationFilter] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<"newest" | "relevance">("newest");
 
   const { user } = useAuth();
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
-  const { data: contracts = [], isLoading, isError } = useContracts(searchTerm, locationFilter);
+  const { data: raw = [], isLoading, isError } = useContracts(searchTerm, locationFilter);
+
+  const contracts = sortBy === "relevance" && searchTerm
+    ? [...raw].sort((a, b) => scoreRelevance(b, searchTerm) - scoreRelevance(a, searchTerm))
+    : raw; // already ordered newest first from Supabase
 
   const handleBookmark = (e: React.MouseEvent, jobId: number) => {
     e.stopPropagation();
@@ -142,9 +163,23 @@ const ContractsPage = () => {
               <>Showing <span className="font-semibold text-foreground">{contracts.length}</span> contracts</>
             )}
           </p>
-          <Button variant="ghost" size="sm" className="text-muted-foreground">
-            <Filter className="h-4 w-4 mr-1" /> More Filters <ChevronDown className="h-3 w-3 ml-1" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Sort by:</span>
+            <div className="flex rounded-lg border overflow-hidden text-xs font-medium">
+              <button
+                className={`px-3 py-1.5 transition-colors ${sortBy === "newest" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent"}`}
+                onClick={() => setSortBy("newest")}
+              >
+                Newest
+              </button>
+              <button
+                className={`px-3 py-1.5 transition-colors ${sortBy === "relevance" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent"}`}
+                onClick={() => setSortBy("relevance")}
+              >
+                Relevance
+              </button>
+            </div>
+          </div>
         </div>
 
         {isLoading && (

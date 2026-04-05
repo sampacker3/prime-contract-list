@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import AuthModal from "@/components/AuthModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { Search, ArrowRight, Bell, FileText, Send } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import RotatingText from "@/components/RotatingText";
 import Navbar from "@/components/Navbar";
@@ -96,20 +97,18 @@ const SAMPLE_CONTRACTS = [
 function ContractCard({ contract }: { contract: typeof SAMPLE_CONTRACTS[0] }) {
   return (
     <div className="w-64 shrink-0 rounded-xl border bg-card p-4 shadow-sm select-none">
+      {/* Title — fully visible */}
       <p className="font-heading font-semibold text-sm text-foreground leading-snug line-clamp-2 mb-2">
         {contract.title}
       </p>
-      <div className="space-y-0.5 mb-3 opacity-50">
+      {/* Rate — fully visible */}
+      <p className="text-xs font-semibold text-primary mb-3">{contract.rate}</p>
+      {/* Company, location, description — all blurred */}
+      <div className="space-y-1.5 blur-[4px] opacity-40 select-none pointer-events-none">
         <p className="text-xs text-muted-foreground truncate">{contract.company}</p>
-        <div className="flex gap-2 text-xs text-muted-foreground">
-          <span className="font-medium text-primary/70">{contract.rate}</span>
-          <span>·</span>
-          <span className="truncate">{contract.location}</span>
-        </div>
+        <p className="text-xs text-muted-foreground truncate">{contract.location}</p>
+        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{contract.desc}</p>
       </div>
-      <p className="text-xs text-muted-foreground line-clamp-3 opacity-30 blur-[2px] select-none pointer-events-none">
-        {contract.desc}
-      </p>
       <div className="mt-3 flex items-center gap-1 text-xs text-primary/60 font-medium">
         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
         Sign up to view
@@ -232,17 +231,26 @@ function StepItem({ step, index, isLast }: { step: typeof steps[0]; index: numbe
   );
 }
 
+const POPULAR_SEARCHES = ["Python", "AWS", "React", "DevOps", "Data Engineer", "Azure", "Java", "MLOps"];
+
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [heroSearch, setHeroSearch] = useState("");
   const { count, ref: countRef } = useCountUp(700);
 
   const handleExplore = () => {
+    if (user) navigate("/contracts");
+    else setShowAuthModal(true);
+  };
+
+  const handleHeroSearch = (term?: string) => {
+    const q = (term ?? heroSearch).trim();
     if (user) {
-      navigate("/contracts");
+      navigate(q ? `/contracts?q=${encodeURIComponent(q)}` : "/contracts");
     } else {
-      setShowAuthModal(true);
+      navigate(q ? `/search-preview?q=${encodeURIComponent(q)}` : "/search-preview");
     }
   };
 
@@ -272,36 +280,89 @@ const Index = () => {
         <div className="absolute inset-0 bg-surface-subtle" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(217_91%_50%/0.08),transparent_60%)]" />
         <div className="container relative pt-16 pb-8 md:pt-24 md:pb-8">
-          <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-4">
-              The UK's #1 Contract Search Engine
-            </p>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold leading-[1.1] text-foreground">
-              Find your next<br />
-              <RotatingText /><br />
-              contract now
-            </h1>
-            <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              We pull contract opportunities from hundreds of websites every 10 mins ready for you to apply early with no hassle.
-            </p>
-            <p className="mt-6 text-2xl md:text-3xl font-heading font-bold text-foreground" ref={countRef}>
-              Over{" "}
-              <span className="text-primary underline decoration-primary decoration-2 underline-offset-4">
-                {count}
-              </span>
-              {" "}contracts in the past month
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Button variant="hero" size="lg" onClick={handleExplore}>
-                Explore Contracts <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
-              <Button variant="hero-outline" size="lg" onClick={() => setShowAuthModal(true)}>
-                Log In <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+            {/* Left: headline + buttons */}
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-widest text-primary mb-4">
+                The UK's #1 Contract Search Engine
+              </p>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold leading-[1.1] text-foreground">
+                Find your next<br />
+                <RotatingText /><br />
+                contract now
+              </h1>
+              <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
+                We pull contract opportunities from hundreds of websites every 10 mins ready for you to apply early with no hassle.
+              </p>
+              <p className="mt-6 text-2xl md:text-3xl font-heading font-bold text-foreground" ref={countRef}>
+                Over{" "}
+                <span className="text-primary underline decoration-primary decoration-2 underline-offset-4">
+                  {count}
+                </span>
+                {" "}contracts in the past month
+              </p>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Button variant="hero" size="lg" onClick={handleExplore}>
+                  Explore Contracts <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+                <Button variant="hero-outline" size="lg" onClick={() => setShowAuthModal(true)}>
+                  Log In <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
-            {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+            {/* Right: search card */}
+            <div className="rounded-2xl border bg-card/80 backdrop-blur-sm shadow-xl p-6">
+              <p className="font-heading font-bold text-lg text-foreground mb-1">Search contracts</p>
+              <p className="text-sm text-muted-foreground mb-4">Find your next role by keyword, skill or technology</p>
+              <form
+                onSubmit={(e) => { e.preventDefault(); handleHeroSearch(); }}
+                className="flex gap-2"
+              >
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="e.g. Python, AWS, DevOps..."
+                    className="pl-9"
+                    value={heroSearch}
+                    onChange={(e) => setHeroSearch(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" variant="hero">
+                  Search
+                </Button>
+              </form>
+
+              {/* Popular searches */}
+              <div className="mt-4">
+                <p className="text-xs text-muted-foreground mb-2">Popular searches</p>
+                <div className="flex flex-wrap gap-2">
+                  {POPULAR_SEARCHES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => handleHeroSearch(s)}
+                      className="rounded-full border bg-accent px-3 py-1 text-xs font-medium text-foreground/80 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live count hint */}
+              <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground border-t pt-4">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                </span>
+                Updated every 10 minutes from 500+ sources
+              </div>
+            </div>
+
           </div>
+          {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
         </div>
 
         {/* Skills ticker — full width inside hero */}
