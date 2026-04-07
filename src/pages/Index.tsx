@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import AuthModal from "@/components/AuthModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { Search, ArrowRight, Bell, FileText, Send } from "lucide-react";
@@ -9,6 +10,8 @@ import RotatingText from "@/components/RotatingText";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
+import { supabase } from "@/lib/supabase";
+import type { Contract } from "@/types/database";
 
 function useScrollReveal() {
   const ref = useRef<HTMLDivElement>(null);
@@ -75,52 +78,74 @@ const steps = [
   },
 ];
 
-const SAMPLE_CONTRACTS = [
-  { title: "Senior React Developer", company: "FinTech Solutions Ltd", rate: "£650/day", location: "London (Remote)", desc: "We are looking for an experienced React developer to join our growing team to help build next-generation financial dashboards..." },
-  { title: "Python Data Engineer", company: "Lloyds Banking Group", rate: "£550/day", location: "Edinburgh / Hybrid", desc: "Seeking a skilled Python data engineer to design and maintain large-scale data pipelines using Apache Spark and Kafka..." },
-  { title: "DevOps Engineer (AWS)", company: "CloudCore Systems", rate: "£700/day", location: "Manchester (Remote)", desc: "We need a DevOps engineer with strong AWS experience to own our CI/CD infrastructure and help migrate legacy services..." },
-  { title: "Java Backend Contractor", company: "HSBC Technology", rate: "£600/day", location: "Canary Wharf / Hybrid", desc: "Join a cross-functional squad delivering high-throughput payment processing services built on Java 17 and Spring Boot..." },
-  { title: "Scrum Master / Agile Coach", company: "Nationwide Building Society", rate: "£500/day", location: "Swindon (Hybrid)", desc: "Looking for an experienced Scrum Master to lead two delivery squads through an exciting digital transformation programme..." },
-  { title: "Full Stack TypeScript Dev", company: "GovTech Innovations", rate: "£575/day", location: "Remote (UK)", desc: "Help us build citizen-facing services using Node.js, React and PostgreSQL. SC clearance eligible candidates preferred..." },
-  { title: "Cloud Architect (Azure)", company: "Vodafone Group", rate: "£800/day", location: "Newbury / Remote", desc: "Define and own the Azure cloud strategy for a major network modernisation programme affecting millions of customers..." },
-  { title: "iOS Swift Developer", company: "Starling Bank", rate: "£650/day", location: "London (Hybrid)", desc: "Join our mobile team building award-winning banking features for our iOS app used by over 3 million customers daily..." },
-  { title: "Business Analyst (Finance)", company: "Barclays Capital", rate: "£525/day", location: "London (Hybrid)", desc: "Support delivery of regulatory change programmes across fixed income and derivatives with strong stakeholder engagement..." },
-  { title: "Golang Microservices Dev", company: "Deliveroo Engineering", rate: "£680/day", location: "London / Remote", desc: "Build and scale high-performance microservices in Go that handle millions of order events per day across our platform..." },
-  { title: "SAP S/4HANA Consultant", company: "Tata Consultancy Services", rate: "£725/day", location: "Birmingham (Hybrid)", desc: "Drive SAP S/4HANA implementation for a major UK retail client, covering finance and supply chain modules end-to-end..." },
-  { title: "Security Engineer (SOC)", company: "BAE Systems Digital", rate: "£600/day", location: "Guildford (SC Cleared)", desc: "Work within a 24/7 security operations centre detecting, triaging and responding to threats across defence networks..." },
-  { title: "Machine Learning Engineer", company: "Rolls-Royce R2 Data Labs", rate: "£750/day", location: "Derby / Remote", desc: "Apply ML to predictive maintenance problems on jet engine telemetry data — Python, PyTorch and MLflow environment..." },
-  { title: "Salesforce CRM Developer", company: "BT Group", rate: "£500/day", location: "London (Hybrid)", desc: "Develop and maintain Salesforce Sales Cloud and Service Cloud solutions for BT's enterprise B2B customer portfolio..." },
-  { title: "Network Engineer (CCNP)", company: "Virgin Media O2", rate: "£475/day", location: "Reading (On-site)", desc: "Responsible for the design, implementation and troubleshooting of core network infrastructure supporting our 5G rollout..." },
-  { title: "UX / Product Designer", company: "Monzo Bank", rate: "£550/day", location: "London / Remote", desc: "Shape the future of personal finance by designing intuitive, beautiful experiences for Monzo's 9 million UK customers..." },
-];
+function useMarqueeContracts() {
+  return useQuery({
+    queryKey: ["marquee-contracts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("LinkedinScrapeResults")
+        .select("id,JobTitle,Company,Location,WorkType,EmploymentType,Description")
+        .order("created_at", { ascending: false })
+        .limit(32);
+      if (error) throw error;
+      return data as Pick<Contract, "id" | "JobTitle" | "Company" | "Location" | "WorkType" | "EmploymentType" | "Description">[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
-function ContractCard({ contract }: { contract: typeof SAMPLE_CONTRACTS[0] }) {
+function ContractCard({ contract, unlocked }: {
+  contract: Pick<Contract, "id" | "JobTitle" | "Company" | "Location" | "WorkType" | "EmploymentType" | "Description">;
+  unlocked: boolean;
+}) {
   return (
     <div className="w-64 shrink-0 rounded-xl border bg-card p-4 shadow-sm select-none">
-      {/* Title — fully visible */}
+      {/* Title — always visible */}
       <p className="font-heading font-semibold text-sm text-foreground leading-snug line-clamp-2 mb-2">
-        {contract.title}
+        {contract.JobTitle ?? "Contract Role"}
       </p>
-      {/* Rate — fully visible */}
-      <p className="text-xs font-semibold text-primary mb-3">{contract.rate}</p>
-      {/* Company, location, description — all blurred */}
-      <div className="space-y-1.5 blur-[4px] opacity-40 select-none pointer-events-none">
-        <p className="text-xs text-muted-foreground truncate">{contract.company}</p>
-        <p className="text-xs text-muted-foreground truncate">{contract.location}</p>
-        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{contract.desc}</p>
-      </div>
-      <div className="mt-3 flex items-center gap-1 text-xs text-primary/60 font-medium">
-        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
-        Sign up to view
-      </div>
+      {/* Work type — always visible */}
+      {contract.WorkType && (
+        <p className="text-xs font-semibold text-primary mb-3">{contract.WorkType}</p>
+      )}
+
+      {unlocked ? (
+        /* Logged in — show everything */
+        <div className="space-y-1">
+          {contract.Company && <p className="text-xs text-muted-foreground truncate">{contract.Company}</p>}
+          {contract.Location && <p className="text-xs text-muted-foreground truncate">{contract.Location}</p>}
+          {contract.Description && (
+            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{contract.Description}</p>
+          )}
+        </div>
+      ) : (
+        /* Logged out — blur company/location/description */
+        <>
+          <div className="space-y-1.5 blur-[4px] opacity-40 pointer-events-none">
+            <p className="text-xs text-muted-foreground truncate">{contract.Company ?? "Company Ltd"}</p>
+            <p className="text-xs text-muted-foreground truncate">{contract.Location ?? "United Kingdom"}</p>
+            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{contract.Description ?? "Full details available after sign up..."}</p>
+          </div>
+          <div className="mt-3 flex items-center gap-1 text-xs text-primary/60 font-medium">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
+            Sign up to view
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 function ContractMarquee() {
-  const half = Math.ceil(SAMPLE_CONTRACTS.length / 2);
-  const row1 = SAMPLE_CONTRACTS.slice(0, half);
-  const row2 = SAMPLE_CONTRACTS.slice(half);
+  const { user } = useAuth();
+  const { data: contracts = [] } = useMarqueeContracts();
+
+  // Need at least a few cards; fall back to empty rows gracefully
+  const half = Math.ceil(contracts.length / 2);
+  const row1 = contracts.slice(0, half);
+  const row2 = contracts.slice(half);
+  const unlocked = !!user;
+
   return (
     <section className="py-16 md:py-20 overflow-hidden bg-background border-b">
       <div className="container mb-10 text-center">
@@ -135,19 +160,23 @@ function ContractMarquee() {
           Get notified on the latest contracts before anyone else
         </h2>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-          Sign up to unlock full details, rates, and one-click applications.
+          {unlocked
+            ? "Showing the latest contracts — sign in to apply early."
+            : "Sign up to unlock full details, rates, and one-click applications."}
         </p>
       </div>
-      <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-background to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-background to-transparent" />
-        <div className="flex gap-4 mb-4" style={{ animation: "marquee-left 40s linear infinite", width: "max-content" }}>
-          {[...row1, ...row1, ...row1].map((c, i) => <ContractCard key={i} contract={c} />)}
+      {contracts.length > 0 && (
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-background to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-background to-transparent" />
+          <div className="flex gap-4 mb-4" style={{ animation: "marquee-left 40s linear infinite", width: "max-content" }}>
+            {[...row1, ...row1, ...row1].map((c, i) => <ContractCard key={i} contract={c} unlocked={unlocked} />)}
+          </div>
+          <div className="flex gap-4" style={{ animation: "marquee-right 48s linear infinite", width: "max-content" }}>
+            {[...row2, ...row2, ...row2].map((c, i) => <ContractCard key={i} contract={c} unlocked={unlocked} />)}
+          </div>
         </div>
-        <div className="flex gap-4" style={{ animation: "marquee-right 48s linear infinite", width: "max-content" }}>
-          {[...row2, ...row2, ...row2].map((c, i) => <ContractCard key={i} contract={c} />)}
-        </div>
-      </div>
+      )}
       <style>{`
         @keyframes marquee-left {
           0%   { transform: translateX(0); }
@@ -306,9 +335,11 @@ const Index = () => {
                 <Button variant="hero" size="lg" onClick={handleExplore}>
                   Explore Contracts <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
-                <Button variant="hero-outline" size="lg" onClick={() => setShowAuthModal(true)}>
-                  Log In <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
+                {!user && (
+                  <Button variant="hero-outline" size="lg" onClick={() => setShowAuthModal(true)}>
+                    Log In <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
 
