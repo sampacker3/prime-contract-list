@@ -94,12 +94,19 @@ function useMarqueeContracts() {
   });
 }
 
-function ContractCard({ contract, unlocked }: {
+function ContractCard({ contract, unlocked, onHover, onLeave, onAction }: {
   contract: Pick<Contract, "id" | "JobTitle" | "Company" | "Location" | "WorkType" | "EmploymentType" | "Description">;
   unlocked: boolean;
+  onHover: () => void;
+  onLeave: () => void;
+  onAction: () => void;
 }) {
   return (
-    <div className="w-64 shrink-0 rounded-xl border bg-card p-4 shadow-sm select-none">
+    <div
+      className="relative w-64 shrink-0 rounded-xl border bg-card p-4 shadow-sm select-none group cursor-pointer"
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
+    >
       {/* Title — always visible */}
       <p className="font-heading font-semibold text-sm text-foreground leading-snug line-clamp-2 mb-2">
         {contract.JobTitle ?? "Contract Role"}
@@ -110,7 +117,6 @@ function ContractCard({ contract, unlocked }: {
       )}
 
       {unlocked ? (
-        /* Logged in — show everything */
         <div className="space-y-1">
           {contract.Company && <p className="text-xs text-muted-foreground truncate">{contract.Company}</p>}
           {contract.Location && <p className="text-xs text-muted-foreground truncate">{contract.Location}</p>}
@@ -119,7 +125,6 @@ function ContractCard({ contract, unlocked }: {
           )}
         </div>
       ) : (
-        /* Logged out — blur company/location/description */
         <>
           <div className="space-y-1.5 blur-[4px] opacity-40 pointer-events-none">
             <p className="text-xs text-muted-foreground truncate">{contract.Company ?? "Company Ltd"}</p>
@@ -132,19 +137,39 @@ function ContractCard({ contract, unlocked }: {
           </div>
         </>
       )}
+
+      {/* Hover overlay */}
+      <div className="absolute inset-0 rounded-xl bg-card/85 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+        <button
+          onClick={(e) => { e.stopPropagation(); onAction(); }}
+          className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 transition-colors"
+        >
+          {unlocked ? "See More →" : "Sign Up Free →"}
+        </button>
+      </div>
     </div>
   );
 }
 
 function ContractMarquee() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { data: contracts = [] } = useMarqueeContracts();
+  const [paused, setPaused] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Need at least a few cards; fall back to empty rows gracefully
   const half = Math.ceil(contracts.length / 2);
   const row1 = contracts.slice(0, half);
   const row2 = contracts.slice(half);
   const unlocked = !!user;
+
+  const handleAction = (contractId: number) => {
+    if (unlocked) {
+      navigate(`/contracts`);
+    } else {
+      setShowAuthModal(true);
+    }
+  };
 
   return (
     <section className="py-16 md:py-20 overflow-hidden bg-background border-b">
@@ -161,7 +186,7 @@ function ContractMarquee() {
         </h2>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
           {unlocked
-            ? "Showing the latest contracts — sign in to apply early."
+            ? "Showing the latest contracts — browse to apply early."
             : "Sign up to unlock full details, rates, and one-click applications."}
         </p>
       </div>
@@ -169,11 +194,31 @@ function ContractMarquee() {
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-background to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-background to-transparent" />
-          <div className="flex gap-4 mb-4" style={{ animation: "marquee-left 40s linear infinite", width: "max-content" }}>
-            {[...row1, ...row1, ...row1].map((c, i) => <ContractCard key={i} contract={c} unlocked={unlocked} />)}
+          <div
+            className="flex gap-4 mb-4"
+            style={{ animation: "marquee-left 70s linear infinite", width: "max-content", animationPlayState: paused ? "paused" : "running" }}
+          >
+            {[...row1, ...row1, ...row1].map((c, i) => (
+              <ContractCard
+                key={i} contract={c} unlocked={unlocked}
+                onHover={() => setPaused(true)}
+                onLeave={() => setPaused(false)}
+                onAction={() => handleAction(c.id)}
+              />
+            ))}
           </div>
-          <div className="flex gap-4" style={{ animation: "marquee-right 48s linear infinite", width: "max-content" }}>
-            {[...row2, ...row2, ...row2].map((c, i) => <ContractCard key={i} contract={c} unlocked={unlocked} />)}
+          <div
+            className="flex gap-4"
+            style={{ animation: "marquee-right 85s linear infinite", width: "max-content", animationPlayState: paused ? "paused" : "running" }}
+          >
+            {[...row2, ...row2, ...row2].map((c, i) => (
+              <ContractCard
+                key={i} contract={c} unlocked={unlocked}
+                onHover={() => setPaused(true)}
+                onLeave={() => setPaused(false)}
+                onAction={() => handleAction(c.id)}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -187,6 +232,7 @@ function ContractMarquee() {
           100% { transform: translateX(0); }
         }
       `}</style>
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </section>
   );
 }
@@ -403,7 +449,7 @@ const Index = () => {
           <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-[hsl(214,100%,97%)] to-transparent" />
           <div
             className="flex gap-3"
-            style={{ animation: "marquee-left 35s linear infinite", width: "max-content" }}
+            style={{ animation: "marquee-left 65s linear infinite", width: "max-content" }}
           >
             {[
               "Python", "MLOps", "Machine Learning", "AI / LLMs", "Data Engineer", "BI Developer",
