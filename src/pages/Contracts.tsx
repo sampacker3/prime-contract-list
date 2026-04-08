@@ -19,7 +19,7 @@ function useContracts(search: string, location: string) {
     queryFn: async () => {
       let query = supabase
         .from("LinkedinScrapeResults")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -33,9 +33,9 @@ function useContracts(search: string, location: string) {
         query = query.ilike("Location", `%${location}%`);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data as Contract[];
+      return { data: data as Contract[], total: count ?? 0 };
     },
   });
 }
@@ -92,11 +92,13 @@ const ContractsPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
-  const { data: raw = [], isLoading, isError } = useContracts(searchTerm, locationFilter);
+  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter);
+  const raw = result?.data ?? [];
+  const totalCount = result?.total ?? 0;
 
   const contracts = sortBy === "relevance" && searchTerm
     ? [...raw].sort((a, b) => scoreRelevance(b, searchTerm) - scoreRelevance(a, searchTerm))
-    : raw; // already ordered newest first from Supabase
+    : raw;
 
   const handleBookmark = (e: React.MouseEvent, jobId: number) => {
     e.stopPropagation();
@@ -160,7 +162,16 @@ const ContractsPage = () => {
             {isLoading ? (
               "Loading contracts..."
             ) : (
-              <>Showing <span className="font-semibold text-foreground">{contracts.length}</span> contracts</>
+              <>
+                Showing <span className="font-semibold text-foreground">{contracts.length}</span>
+                {totalCount > contracts.length && (
+                  <> of <span className="font-semibold text-foreground">{totalCount.toLocaleString("en-GB")}</span></>
+                )}
+                {" "}contract{totalCount !== 1 ? "s" : ""}
+                {(searchTerm || locationFilter) && (
+                  <span className="ml-1 text-primary font-medium">matching your search</span>
+                )}
+              </>
             )}
           </p>
           <div className="flex items-center gap-2">

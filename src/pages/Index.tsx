@@ -144,7 +144,7 @@ function ContractCard({ contract, unlocked, onHover, onLeave, onAction }: {
           onClick={(e) => { e.stopPropagation(); onAction(); }}
           className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 transition-colors"
         >
-          {unlocked ? "See More →" : "Sign Up Free →"}
+          {unlocked ? "See More →" : "Sign Up →"}
         </button>
       </div>
     </div>
