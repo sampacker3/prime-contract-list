@@ -165,7 +165,7 @@ function ContractMarquee() {
 
   const handleAction = (contractId: number) => {
     if (unlocked) {
-      navigate(`/contracts`);
+      navigate(`/contract/${contractId}`);
     } else {
       setShowAuthModal(true);
     }
