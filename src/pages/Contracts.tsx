@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, Clock, Filter, ChevronDown, ExternalLink, Bookmark, Loader2, ChevronUp } from "lucide-react";
+import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -265,19 +265,6 @@ const ContractsPage = () => {
                         >
                           <Bookmark className={`h-4 w-4 ${savedJobIds.has(contract.id) ? "fill-current" : ""}`} />
                         </Button>
-                        {contract.URL && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(contract.URL!, "_blank");
-                            }}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        )}
                         <Button variant="ghost" size="icon" className="text-muted-foreground">
                           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
@@ -286,16 +273,22 @@ const ContractsPage = () => {
                   </div>
 
                   {/* Expanded description */}
-                  {expanded && contract.Description && (
+                  {expanded && (
                     <div className="px-5 pb-5 border-t pt-4">
-                      <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">
-                        {contract.Description}
-                      </p>
-                    </div>
-                  )}
-                  {expanded && !contract.Description && (
-                    <div className="px-5 pb-5 border-t pt-4">
-                      <p className="text-sm text-muted-foreground italic">No description available.</p>
+                      {contract.Description ? (
+                        <p className="text-sm text-foreground whitespace-pre-line leading-relaxed line-clamp-4 mb-4">
+                          {contract.Description}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic mb-4">No description available.</p>
+                      )}
+                      <Button
+                        variant="hero"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/contract/${contract.id}`); }}
+                      >
+                        See More <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   )}
                 </div>
