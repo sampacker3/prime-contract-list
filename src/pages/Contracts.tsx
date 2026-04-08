@@ -13,15 +13,20 @@ import { useSavedJobs } from "@/hooks/useSavedJobs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-function useContracts(search: string, location: string) {
+const PAGE_SIZE = 25;
+
+function useContracts(search: string, location: string, page: number) {
   return useQuery({
-    queryKey: ["contracts", search, location],
+    queryKey: ["contracts", search, location, page],
     queryFn: async () => {
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       let query = supabase
         .from("LinkedinScrapeResults")
         .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(50);
+        .range(from, to);
 
       if (search) {
         query = query.or(
@@ -37,6 +42,7 @@ function useContracts(search: string, location: string) {
       if (error) throw error;
       return { data: data as Contract[], total: count ?? 0 };
     },
+    placeholderData: (prev) => prev,
   });
 }
 
@@ -88,13 +94,15 @@ const ContractsPage = () => {
   const [locationFilter, setLocationFilter] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"newest" | "relevance">("newest");
+  const [page, setPage] = useState(0);
 
   const { user } = useAuth();
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
-  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter);
+  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page);
   const raw = result?.data ?? [];
   const totalCount = result?.total ?? 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   const contracts = sortBy === "relevance" && searchTerm
     ? [...raw].sort((a, b) => scoreRelevance(b, searchTerm) - scoreRelevance(a, searchTerm))
@@ -110,6 +118,7 @@ const ContractsPage = () => {
     e.preventDefault();
     setSearchTerm(searchInput);
     setLocationFilter(locationInput);
+    setPage(0);
   };
 
   const toggleExpand = (id: number) => {
@@ -300,6 +309,50 @@ const ContractsPage = () => {
                 <p className="text-sm text-muted-foreground mt-1">Try adjusting your search terms</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-10">
+            <button
+              onClick={() => { setPage(p => Math.max(0, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              disabled={page === 0}
+              className="px-3 py-1.5 rounded-lg border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent transition-colors"
+            >
+              ← Prev
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i)
+              .filter(i => i === 0 || i === totalPages - 1 || Math.abs(i - page) <= 2)
+              .reduce<(number | "…")[]>((acc, i, idx, arr) => {
+                if (idx > 0 && (i as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+                acc.push(i);
+                return acc;
+              }, [])
+              .map((item, idx) =>
+                item === "…" ? (
+                  <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground text-sm">…</span>
+                ) : (
+                  <button
+                    key={item}
+                    onClick={() => { setPage(item as number); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    className={`min-w-[36px] px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+                      page === item ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"
+                    }`}
+                  >
+                    {(item as number) + 1}
+                  </button>
+                )
+              )}
+
+            <button
+              onClick={() => { setPage(p => Math.min(totalPages - 1, p + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              disabled={page >= totalPages - 1}
+              className="px-3 py-1.5 rounded-lg border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent transition-colors"
+            >
+              Next →
+            </button>
           </div>
         )}
       </section>
