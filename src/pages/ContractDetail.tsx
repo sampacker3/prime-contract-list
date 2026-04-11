@@ -58,7 +58,7 @@ export default function ContractDetail() {
           <p className="font-heading font-semibold text-foreground mb-1">Pro plan required</p>
           <p className="text-sm text-muted-foreground mb-4">Upgrade to read full descriptions and apply directly.</p>
           <Button variant="hero" asChild>
-            <Link to="/account">Upgrade to Pro</Link>
+            <Link to="/upgrade">Upgrade to Pro</Link>
           </Button>
         </>
       ) : (
@@ -208,7 +208,7 @@ export default function ContractDetail() {
               <div className="border-t bg-surface-subtle px-6 py-4 flex items-center justify-between gap-4">
                 <p className="text-sm text-muted-foreground">Upgrade to Pro to apply directly to this role.</p>
                 <Button variant="hero" asChild>
-                  <Link to="/account">Upgrade to Pro</Link>
+                  <Link to="/upgrade">Upgrade to Pro</Link>
                 </Button>
               </div>
             )}

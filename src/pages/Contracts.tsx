@@ -174,7 +174,7 @@ const ContractsPage = () => {
               <span className="text-muted-foreground hidden sm:inline">Upgrade to Pro to see full details, company info, and apply directly.</span>
             </div>
             <Button variant="hero" size="sm" asChild>
-              <Link to="/account">Upgrade to Pro</Link>
+              <Link to="/upgrade">Upgrade to Pro</Link>
             </Button>
           </div>
         </div>
@@ -327,7 +327,7 @@ const ContractsPage = () => {
                             <span>Upgrade to Pro to view full descriptions and apply directly.</span>
                           </div>
                           <Button variant="hero" size="sm" asChild onClick={(e) => e.stopPropagation()}>
-                            <Link to="/account">Upgrade</Link>
+                            <Link to="/upgrade">Upgrade</Link>
                           </Button>
                         </div>
                       )}
