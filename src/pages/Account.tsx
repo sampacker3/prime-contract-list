@@ -31,6 +31,7 @@ const AccountPage = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stripeLoading, setStripeLoading] = useState<'checkout' | 'portal' | null>(null);
   const [stripeError, setStripeError] = useState<string | null>(null);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
   const [cvName, setCvName] = useState<string | null>(null);
   const [cvUploading, setCvUploading] = useState(false);
@@ -48,21 +49,42 @@ const AccountPage = () => {
       .then(({ data }) => { if (data) setProfile(data as Profile); });
   }, [user]);
 
-  // Read ?checkout= param to show feedback after Stripe redirect
+  // Read ?checkout= param — poll profile until webhook activates subscription
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('checkout') === 'success') {
-      // Re-fetch profile so subscription shows as active
-      if (user) {
-        supabase.from('profiles').select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id')
-          .eq('id', user.id).single()
-          .then(({ data }) => { if (data) setProfile(data as Profile); });
+    if (params.get('checkout') !== 'success' || !user) return;
+    setCheckoutSuccess(true);
+    window.history.replaceState({}, '', '/account');
+
+    let attempts = 0;
+    const maxAttempts = 12; // poll every 2s for up to 24s
+
+    const poll = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id')
+        .eq('id', user.id)
+        .single();
+
+      if (data) {
+        setProfile(data as Profile);
+        if ((data as Profile).subscription_active) {
+          clearInterval(interval);
+          setTimeout(() => setCheckoutSuccess(false), 8000);
+          return;
+        }
       }
-      window.history.replaceState({}, '', '/account');
-    }
+
+      attempts++;
+      if (attempts >= maxAttempts) clearInterval(interval);
+    };
+
+    poll(); // immediate first check
+    const interval = setInterval(poll, 2000);
+    return () => clearInterval(interval);
   }, [user]);
 
-  const callEdgeFunction = async (fn: string) => {
+  const callEdgeFunction = async (fn: string, body?: Record<string, string>): Promise<{ url?: string; error?: string }> => {
     const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
       method: 'POST',
@@ -71,24 +93,45 @@ const AccountPage = () => {
         apikey: SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
+      body: body ? JSON.stringify(body) : undefined,
     });
-    return res.json();
+    const json = await res.json();
+    if (!res.ok || !json.url) {
+      return { error: json.error || json.message || `Request failed (${res.status})` };
+    }
+    return json;
   };
 
   const handleUpgrade = async () => {
     setStripeError(null);
     setStripeLoading('checkout');
-    const { url, error } = await callEdgeFunction('create-checkout-session');
-    if (error) { setStripeError(error); setStripeLoading(null); return; }
-    window.location.href = url;
+    try {
+      const origin = window.location.origin;
+      const { url, error } = await callEdgeFunction('create-checkout-session', {
+        success_url: `${origin}/account?checkout=success`,
+        cancel_url: `${origin}/account?checkout=cancelled`,
+      });
+      if (error || !url) { setStripeError(error ?? 'No checkout URL returned'); setStripeLoading(null); return; }
+      window.location.href = url;
+    } catch (e) {
+      setStripeError('Something went wrong. Please try again.');
+      setStripeLoading(null);
+    }
   };
 
   const handleManageBilling = async () => {
     setStripeError(null);
     setStripeLoading('portal');
-    const { url, error } = await callEdgeFunction('create-portal-session');
-    if (error) { setStripeError(error); setStripeLoading(null); return; }
-    window.location.href = url;
+    try {
+      const { url, error } = await callEdgeFunction('create-portal-session', {
+        return_url: `${window.location.origin}/account`,
+      });
+      if (error || !url) { setStripeError(error ?? 'No portal URL returned'); setStripeLoading(null); return; }
+      window.location.href = url;
+    } catch (e) {
+      setStripeError('Something went wrong. Please try again.');
+      setStripeLoading(null);
+    }
   };
 
   // Check storage directly for an existing CV — source of truth
@@ -211,6 +254,18 @@ const AccountPage = () => {
           <p className="mt-2 text-muted-foreground">Manage your subscription and account settings.</p>
         </div>
       </section>
+
+      {checkoutSuccess && (
+        <div className="bg-green-50 border-b border-green-200">
+          <div className="container max-w-3xl py-4 flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+            <div>
+              <p className="font-semibold text-green-800">Welcome to Pro! 🎉</p>
+              <p className="text-sm text-green-700">Your subscription is now active. You have full access to all contracts and features.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="container py-8 flex-1 max-w-3xl space-y-6">
         {/* CV Upload */}

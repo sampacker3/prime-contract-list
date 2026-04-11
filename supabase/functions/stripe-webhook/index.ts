@@ -36,12 +36,13 @@ Deno.serve(async (req) => {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
         const renewsAt = new Date(subscription.current_period_end * 1000).toISOString()
 
-        await supabase.from('profiles').update({
+        await supabase.from('profiles').upsert({
+          id: userId,
           subscription_plan: 'pro',
           subscription_active: true,
           subscription_renews_at: renewsAt,
           stripe_customer_id: session.customer as string,
-        }).eq('id', userId)
+        }, { onConflict: 'id' })
 
         console.log(`✅ Subscription activated for user ${userId}`)
         break
@@ -111,6 +112,28 @@ Deno.serve(async (req) => {
         }).eq('id', profile.id)
 
         console.log(`⚠️ Payment failed for customer ${customerId}`)
+        break
+      }
+
+      // Newer Stripe API versions send invoice_payment.paid instead of invoice.payment_succeeded
+      case 'invoice_payment.paid': {
+        const invoicePayment = event.data.object as { customer?: string; status?: string }
+        const customerId = invoicePayment.customer as string
+        if (!customerId) break
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('stripe_customer_id', customerId)
+          .single()
+
+        if (!profile) break
+
+        await supabase.from('profiles').update({
+          subscription_active: true,
+        }).eq('id', profile.id)
+
+        console.log(`✅ Invoice paid for customer ${customerId}`)
         break
       }
 

@@ -38,9 +38,13 @@ Deno.serve(async (req) => {
       throw new Error('No billing account found. Please subscribe first.')
     }
 
+    let body: { return_url?: string } = {}
+    try { body = await req.clone().json() } catch (_) { /* no body is fine */ }
+    const returnUrl = body.return_url ?? `${SITE_URL}/account`
+
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: `${SITE_URL}/account`,
+      return_url: returnUrl,
     })
 
     return new Response(JSON.stringify({ url: session.url }), {

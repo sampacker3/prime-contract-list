@@ -52,14 +52,20 @@ Deno.serve(async (req) => {
         .eq('id', user.id)
     }
 
+    // Accept dynamic URLs from the client (falls back to SITE_URL)
+    let body: { success_url?: string; cancel_url?: string } = {}
+    try { body = await req.clone().json() } catch (_) { /* no body is fine */ }
+    const successUrl = body.success_url ?? `${SITE_URL}/account?checkout=success`
+    const cancelUrl = body.cancel_url ?? `${SITE_URL}/account?checkout=cancelled`
+
     // Create Checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [{ price: PRICE_ID, quantity: 1 }],
       mode: 'subscription',
-      success_url: `${SITE_URL}/account?checkout=success`,
-      cancel_url: `${SITE_URL}/account?checkout=cancelled`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: { supabase_user_id: user.id },
     })
 
