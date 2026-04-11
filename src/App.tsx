@@ -14,6 +14,8 @@ import Signup from "./pages/Signup.tsx";
 import SavedJobs from "./pages/SavedJobs.tsx";
 import SearchPreview from "./pages/SearchPreview.tsx";
 import ContractDetail from "./pages/ContractDetail.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -39,6 +41,8 @@ const App = () => (
             <Route path="/search-preview" element={<SearchPreview />} />
             <Route path="/contract/:id" element={<ContractDetail />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/saved" element={<ProtectedRoute><SavedJobs /></ProtectedRoute>} />
             <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
