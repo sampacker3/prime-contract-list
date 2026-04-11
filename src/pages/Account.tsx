@@ -13,16 +13,83 @@ import SEO from "@/components/SEO";
 import { supabase } from "@/lib/supabase";
 
 const CV_BUCKET = "cvs";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+type Profile = {
+  subscription_plan: 'free' | 'pro' | 'enterprise'
+  subscription_active: boolean
+  subscription_renews_at: string | null
+  stripe_customer_id: string | null
+}
 
 const AccountPage = () => {
   const { user, signOut, updatePassword } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [stripeLoading, setStripeLoading] = useState<'checkout' | 'portal' | null>(null);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+
   const [cvName, setCvName] = useState<string | null>(null);
   const [cvUploading, setCvUploading] = useState(false);
   const [cvDeleting, setCvDeleting] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
+
+  // Fetch real profile / subscription data
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('profiles')
+      .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => { if (data) setProfile(data as Profile); });
+  }, [user]);
+
+  // Read ?checkout= param to show feedback after Stripe redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success') {
+      // Re-fetch profile so subscription shows as active
+      if (user) {
+        supabase.from('profiles').select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id')
+          .eq('id', user.id).single()
+          .then(({ data }) => { if (data) setProfile(data as Profile); });
+      }
+      window.history.replaceState({}, '', '/account');
+    }
+  }, [user]);
+
+  const callEdgeFunction = async (fn: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`,
+        apikey: SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+    });
+    return res.json();
+  };
+
+  const handleUpgrade = async () => {
+    setStripeError(null);
+    setStripeLoading('checkout');
+    const { url, error } = await callEdgeFunction('create-checkout-session');
+    if (error) { setStripeError(error); setStripeLoading(null); return; }
+    window.location.href = url;
+  };
+
+  const handleManageBilling = async () => {
+    setStripeError(null);
+    setStripeLoading('portal');
+    const { url, error } = await callEdgeFunction('create-portal-session');
+    if (error) { setStripeError(error); setStripeLoading(null); return; }
+    window.location.href = url;
+  };
 
   // Check storage directly for an existing CV — source of truth
   useEffect(() => {
@@ -231,34 +298,66 @@ const AccountPage = () => {
             </div>
           </div>
 
-          <div className="rounded-lg bg-accent/50 p-4 mb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-heading font-semibold text-foreground">Pro Plan</span>
-                  <Badge className="bg-primary text-primary-foreground text-xs">Active</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">£29.99/month · Renews 30 Apr 2026</p>
-              </div>
-              <CheckCircle className="h-5 w-5 text-primary" />
+          {stripeError && (
+            <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg mb-4">
+              <AlertCircle className="h-4 w-4 shrink-0" /> {stripeError}
             </div>
-          </div>
+          )}
 
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button variant="hero" size="sm">
-              <CreditCard className="h-4 w-4 mr-1" /> Manage Billing
-              <ExternalLink className="h-3 w-3 ml-1" />
-            </Button>
-            <Button variant="outline" size="sm">
-              Change Plan
-            </Button>
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-              Cancel Subscription
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">
-            Billing is handled securely via Stripe. Click "Manage Billing" to update your payment method or download invoices.
-          </p>
+          {profile?.subscription_active ? (
+            <>
+              <div className="rounded-lg bg-accent/50 p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-heading font-semibold text-foreground capitalize">
+                        {profile.subscription_plan} Plan
+                      </span>
+                      <Badge className="bg-primary text-primary-foreground text-xs">Active</Badge>
+                    </div>
+                    {profile.subscription_renews_at && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        £29.99/month · Renews {new Date(profile.subscription_renews_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button variant="hero" size="sm" onClick={handleManageBilling} disabled={stripeLoading === 'portal'}>
+                  {stripeLoading === 'portal'
+                    ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Loading…</>
+                    : <><CreditCard className="h-4 w-4 mr-1" /> Manage Billing <ExternalLink className="h-3 w-3 ml-1" /></>
+                  }
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Billing is handled securely via Stripe. Click "Manage Billing" to update your payment method, change plan, or download invoices.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="rounded-lg border border-dashed p-4 mb-4 text-center">
+                <p className="font-heading font-semibold text-foreground mb-1">Free Plan</p>
+                <p className="text-sm text-muted-foreground mb-3">Upgrade to Pro for full access to all contracts, rates, and early alerts.</p>
+                <ul className="text-sm text-muted-foreground space-y-1 mb-4 text-left max-w-xs mx-auto">
+                  {["Unlimited contract browsing","Full job descriptions & company details","Early access — updated every 10 mins","Email alerts with instant notifications","Save & bookmark contracts"].map(f => (
+                    <li key={f} className="flex items-center gap-2">
+                      <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" /> {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <Button variant="hero" onClick={handleUpgrade} disabled={stripeLoading === 'checkout'}>
+                {stripeLoading === 'checkout'
+                  ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Redirecting to Stripe…</>
+                  : <><CreditCard className="h-4 w-4 mr-1" /> Upgrade to Pro — £29.99/month</>
+                }
+              </Button>
+              <p className="text-xs text-muted-foreground mt-3">Secure checkout via Stripe. Cancel anytime.</p>
+            </>
+          )}
         </div>
 
         {/* Profile */}

@@ -29,6 +29,7 @@ export type Database = {
           subscription_active: boolean
           subscription_renews_at: string | null
           cv_filename: string | null
+          stripe_customer_id: string | null
         }
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at'>
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
