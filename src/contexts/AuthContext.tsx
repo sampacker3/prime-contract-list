@@ -6,6 +6,7 @@ type AuthContextType = {
   session: Session | null
   user: User | null
   loading: boolean
+  isPro: boolean
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
@@ -19,6 +20,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isPro, setIsPro] = useState(false)
+
+  // Fetch subscription status whenever user changes
+  useEffect(() => {
+    if (!user) { setIsPro(false); return; }
+    supabase
+      .from('profiles')
+      .select('subscription_active')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => setIsPro(!!data?.subscription_active))
+  }, [user])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -62,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signUp, signIn, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ session, user, loading, isPro, signUp, signIn, signOut, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   )

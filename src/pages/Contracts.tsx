@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight } from "lucide-react";
+import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import type { Contract } from "@/types/database";
 import SEO from "@/components/SEO";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 
 const PAGE_SIZE = 25;
 
@@ -96,7 +96,7 @@ const ContractsPage = () => {
   const [sortBy, setSortBy] = useState<"newest" | "relevance">("newest");
   const [page, setPage] = useState(0);
 
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
   const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page);
@@ -110,7 +110,7 @@ const ContractsPage = () => {
 
   const handleBookmark = (e: React.MouseEvent, jobId: number) => {
     e.stopPropagation();
-    if (!user) { navigate("/login"); return; }
+    if (!isPro) { navigate("/account"); return; }
     toggleSave.mutate(jobId);
   };
 
@@ -163,6 +163,22 @@ const ContractsPage = () => {
           </form>
         </div>
       </section>
+
+      {/* Upgrade banner for free logged-in users */}
+      {user && !isPro && (
+        <div className="bg-primary/5 border-b border-primary/20">
+          <div className="container py-3 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2 text-sm">
+              <Lock className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-foreground font-medium">You're on the free plan.</span>
+              <span className="text-muted-foreground hidden sm:inline">Upgrade to Pro to see full details, company info, and apply directly.</span>
+            </div>
+            <Button variant="hero" size="sm" asChild>
+              <Link to="/account">Upgrade to Pro</Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Results */}
       <section className="container py-8 flex-1">
@@ -243,13 +259,25 @@ const ContractsPage = () => {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">{contract.Company ?? "Company not listed"}</p>
+                        {isPro ? (
+                          <p className="text-sm text-muted-foreground">{contract.Company ?? "Company not listed"}</p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground blur-sm select-none opacity-50 w-32">██████████ Ltd</p>
+                        )}
                         <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          {contract.Location && (
-                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{contract.Location}</span>
-                          )}
-                          {contract.EmploymentType && (
-                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.EmploymentType}</span>
+                          {isPro ? (
+                            <>
+                              {contract.Location && (
+                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{contract.Location}</span>
+                              )}
+                              {contract.EmploymentType && (
+                                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.EmploymentType}</span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="flex items-center gap-1 blur-sm select-none opacity-50">
+                              <MapPin className="h-3 w-3" />London, UK · Contract
+                            </span>
                           )}
                         </div>
                       </div>
@@ -275,20 +303,34 @@ const ContractsPage = () => {
                   {/* Expanded description */}
                   {expanded && (
                     <div className="px-5 pb-5 border-t pt-4">
-                      {contract.Description ? (
-                        <p className="text-sm text-foreground whitespace-pre-line leading-relaxed line-clamp-4 mb-4">
-                          {contract.Description}
-                        </p>
+                      {isPro ? (
+                        <>
+                          {contract.Description ? (
+                            <p className="text-sm text-foreground whitespace-pre-line leading-relaxed line-clamp-4 mb-4">
+                              {contract.Description}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic mb-4">No description available.</p>
+                          )}
+                          <Button
+                            variant="hero"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/contract/${contract.id}`); }}
+                          >
+                            See More <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                          </Button>
+                        </>
                       ) : (
-                        <p className="text-sm text-muted-foreground italic mb-4">No description available.</p>
+                        <div className="flex items-center justify-between gap-4 py-2">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Lock className="h-4 w-4 text-primary shrink-0" />
+                            <span>Upgrade to Pro to view full descriptions and apply directly.</span>
+                          </div>
+                          <Button variant="hero" size="sm" asChild onClick={(e) => e.stopPropagation()}>
+                            <Link to="/account">Upgrade</Link>
+                          </Button>
+                        </div>
                       )}
-                      <Button
-                        variant="hero"
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/contract/${contract.id}`); }}
-                      >
-                        See More <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                      </Button>
                     </div>
                   )}
                 </div>

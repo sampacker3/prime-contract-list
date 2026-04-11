@@ -41,13 +41,38 @@ function formatPostedDate(createdAt: string): string {
 export default function ContractDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { data: contract, isLoading, isError } = useContract(Number(id));
   const isToday = contract?.created_at
     ? new Date(contract.created_at) >= new Date(new Date().setHours(0, 0, 0, 0))
     : false;
+
+  // CTA shown inside the locked overlay
+  const LockedCTA = () => (
+    <div className="text-center mt-4">
+      <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
+      {user ? (
+        <>
+          <p className="font-heading font-semibold text-foreground mb-1">Pro plan required</p>
+          <p className="text-sm text-muted-foreground mb-4">Upgrade to read full descriptions and apply directly.</p>
+          <Button variant="hero" asChild>
+            <Link to="/account">Upgrade to Pro</Link>
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="font-heading font-semibold text-foreground mb-1">Sign up to read the full description</p>
+          <p className="text-sm text-muted-foreground mb-4">Pro plan — takes 30 seconds to get started</p>
+          <div className="flex gap-2 justify-center">
+            <Button variant="hero" onClick={() => setShowAuthModal(true)}>Sign Up</Button>
+            <Button variant="outline" onClick={() => setShowAuthModal(true)}>Log In</Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -94,7 +119,7 @@ export default function ContractDetail() {
                     )}
                   </div>
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {user ? (
+                    {isPro ? (
                       <>
                         {contract.Company && (
                           <span className="flex items-center gap-1.5">
@@ -118,7 +143,6 @@ export default function ContractDetail() {
                         )}
                       </>
                     ) : (
-                      /* Blurred meta for guests */
                       <span className="blur-sm select-none opacity-50">████████ Ltd · London, UK · Contract</span>
                     )}
                     <span className="text-xs">
@@ -127,7 +151,7 @@ export default function ContractDetail() {
                   </div>
                 </div>
 
-                {user && contract.URL && (
+                {isPro && contract.URL && (
                   <Button variant="hero" size="sm" asChild className="shrink-0">
                     <a href={contract.URL} target="_blank" rel="noopener noreferrer">
                       Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
@@ -139,8 +163,7 @@ export default function ContractDetail() {
 
             {/* Body */}
             <div className="p-6">
-              {user ? (
-                /* Logged in — full description */
+              {isPro ? (
                 contract.Description ? (
                   <div>
                     <h2 className="font-heading font-semibold text-foreground mb-3">Job Description</h2>
@@ -152,7 +175,6 @@ export default function ContractDetail() {
                   <p className="text-sm text-muted-foreground italic">No description available for this contract.</p>
                 )
               ) : (
-                /* Logged out — blurred description + CTA */
                 <div>
                   <h2 className="font-heading font-semibold text-foreground mb-3">Job Description</h2>
                   <div className="relative">
@@ -161,35 +183,32 @@ export default function ContractDetail() {
                         <div key={i} className="h-3.5 bg-muted-foreground/30 rounded" style={{ width: `${w}%` }} />
                       ))}
                     </div>
-                    {/* Gradient fade + CTA */}
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent via-card/60 to-card flex flex-col items-center justify-end pb-2">
-                      <div className="text-center mt-4">
-                        <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
-                        <p className="font-heading font-semibold text-foreground mb-1">Sign up to read the full description</p>
-                        <p className="text-sm text-muted-foreground mb-4">Free account — takes 30 seconds</p>
-                        <div className="flex gap-2 justify-center">
-                          <Button variant="hero" onClick={() => setShowAuthModal(true)}>
-                            Sign Up Free
-                          </Button>
-                          <Button variant="outline" onClick={() => setShowAuthModal(true)}>
-                            Log In
-                          </Button>
-                        </div>
-                      </div>
+                      <LockedCTA />
                     </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Footer CTA for logged-in users */}
-            {user && contract.URL && (
+            {/* Footer CTA for Pro users */}
+            {isPro && contract.URL && (
               <div className="border-t bg-surface-subtle px-6 py-4 flex items-center justify-between gap-4">
                 <p className="text-sm text-muted-foreground">Ready to apply? Get in early.</p>
                 <Button variant="hero" asChild>
                   <a href={contract.URL} target="_blank" rel="noopener noreferrer">
                     Apply on LinkedIn <ExternalLink className="ml-1 h-3.5 w-3.5" />
                   </a>
+                </Button>
+              </div>
+            )}
+
+            {/* Footer CTA for free logged-in users */}
+            {!isPro && user && (
+              <div className="border-t bg-surface-subtle px-6 py-4 flex items-center justify-between gap-4">
+                <p className="text-sm text-muted-foreground">Upgrade to Pro to apply directly to this role.</p>
+                <Button variant="hero" asChild>
+                  <Link to="/account">Upgrade to Pro</Link>
                 </Button>
               </div>
             )}

@@ -94,9 +94,11 @@ function useMarqueeContracts() {
   });
 }
 
-function ContractCard({ contract, unlocked, onHover, onLeave, onAction }: {
+function ContractCard({ contract, unlocked, lockLabel = "Sign up to view", actionLabel, onHover, onLeave, onAction }: {
   contract: Pick<Contract, "id" | "JobTitle" | "Company" | "Location" | "WorkType" | "EmploymentType" | "Description">;
   unlocked: boolean;
+  lockLabel?: string;
+  actionLabel?: string;
   onHover: () => void;
   onLeave: () => void;
   onAction: () => void;
@@ -133,7 +135,7 @@ function ContractCard({ contract, unlocked, onHover, onLeave, onAction }: {
           </div>
           <div className="mt-3 flex items-center gap-1 text-xs text-primary/60 font-medium">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" /></svg>
-            Sign up to view
+            {lockLabel}
           </div>
         </>
       )}
@@ -144,7 +146,7 @@ function ContractCard({ contract, unlocked, onHover, onLeave, onAction }: {
           onClick={(e) => { e.stopPropagation(); onAction(); }}
           className="px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 transition-colors"
         >
-          {unlocked ? "See More →" : "Sign Up →"}
+          {unlocked ? "See More →" : (actionLabel ?? "Sign Up →")}
         </button>
       </div>
     </div>
@@ -152,7 +154,7 @@ function ContractCard({ contract, unlocked, onHover, onLeave, onAction }: {
 }
 
 function ContractMarquee() {
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
   const navigate = useNavigate();
   const { data: contracts = [] } = useMarqueeContracts();
   const [paused, setPaused] = useState(false);
@@ -161,11 +163,13 @@ function ContractMarquee() {
   const half = Math.ceil(contracts.length / 2);
   const row1 = contracts.slice(0, half);
   const row2 = contracts.slice(half);
-  const unlocked = !!user;
+  const unlocked = isPro;
 
   const handleAction = (contractId: number) => {
-    if (unlocked) {
+    if (isPro) {
       navigate(`/contract/${contractId}`);
+    } else if (user) {
+      navigate("/account");
     } else {
       setShowAuthModal(true);
     }
@@ -185,8 +189,10 @@ function ContractMarquee() {
           Get notified on the latest contracts before anyone else
         </h2>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-          {unlocked
+          {isPro
             ? "Showing the latest contracts — browse to apply early."
+            : user
+            ? "Upgrade to Pro to unlock full details, rates, and one-click applications."
             : "Sign up to unlock full details, rates, and one-click applications."}
         </p>
       </div>
@@ -201,6 +207,8 @@ function ContractMarquee() {
             {[...row1, ...row1, ...row1].map((c, i) => (
               <ContractCard
                 key={i} contract={c} unlocked={unlocked}
+                lockLabel={user ? "Pro plan required" : "Sign up to view"}
+                actionLabel={user ? "Upgrade to Pro →" : "Sign Up →"}
                 onHover={() => setPaused(true)}
                 onLeave={() => setPaused(false)}
                 onAction={() => handleAction(c.id)}
@@ -214,6 +222,8 @@ function ContractMarquee() {
             {[...row2, ...row2, ...row2].map((c, i) => (
               <ContractCard
                 key={i} contract={c} unlocked={unlocked}
+                lockLabel={user ? "Pro plan required" : "Sign up to view"}
+                actionLabel={user ? "Upgrade to Pro →" : "Sign Up →"}
                 onHover={() => setPaused(true)}
                 onLeave={() => setPaused(false)}
                 onAction={() => handleAction(c.id)}
@@ -309,20 +319,24 @@ function StepItem({ step, index, isLast }: { step: typeof steps[0]; index: numbe
 const POPULAR_SEARCHES = ["Python", "AWS", "React", "DevOps", "Data Engineer", "Azure", "Java", "MLOps"];
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [heroSearch, setHeroSearch] = useState("");
   const { count, ref: countRef } = useCountUp(700);
 
   const handleExplore = () => {
-    if (user) navigate("/contracts");
+    if (isPro) navigate("/contracts");
+    else if (user) navigate("/contracts"); // free user — will see upgrade prompts inline
     else setShowAuthModal(true);
   };
 
   const handleHeroSearch = (term?: string) => {
     const q = (term ?? heroSearch).trim();
-    if (user) {
+    if (isPro) {
+      navigate(q ? `/contracts?q=${encodeURIComponent(q)}` : "/contracts");
+    } else if (user) {
+      // Free logged-in user — show contracts page with upgrade prompts
       navigate(q ? `/contracts?q=${encodeURIComponent(q)}` : "/contracts");
     } else {
       navigate(q ? `/search-preview?q=${encodeURIComponent(q)}` : "/search-preview");
