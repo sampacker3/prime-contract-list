@@ -1,5 +1,8 @@
 import { useRef, useState, useEffect } from "react";
-import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle, LogOut, FileText, Upload, Trash2, Download, Loader2 } from "lucide-react";
+import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle, LogOut, FileText, Upload, Trash2, Download, Loader2, Lock, Eye, EyeOff } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
@@ -12,7 +15,7 @@ import { supabase } from "@/lib/supabase";
 const CV_BUCKET = "cvs";
 
 const AccountPage = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updatePassword } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,6 +97,31 @@ const AccountPage = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwShow, setPwShow] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwSuccess, setPwSuccess] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwError(null);
+    if (pwNew.length < 6) { setPwError("Password must be at least 6 characters."); return; }
+    if (pwNew !== pwConfirm) { setPwError("Passwords do not match."); return; }
+    setPwLoading(true);
+    const { error } = await updatePassword(pwNew);
+    if (error) {
+      setPwError(error.message);
+    } else {
+      setPwSuccess(true);
+      setPwNew(""); setPwConfirm("");
+      setTimeout(() => { setPwSuccess(false); setPwOpen(false); }, 2500);
+    }
+    setPwLoading(false);
   };
 
   const memberSince = user?.created_at
@@ -262,6 +290,70 @@ const AccountPage = () => {
               <LogOut className="h-4 w-4 mr-1" /> Sign Out
             </Button>
           </div>
+        </div>
+
+        {/* Change Password */}
+        <div className="rounded-xl border bg-card p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary">
+                <Lock className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-heading font-semibold text-foreground">Password</h2>
+                <p className="text-sm text-muted-foreground">Update your account password</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => { setPwOpen(o => !o); setPwError(null); setPwSuccess(false); }}>
+              {pwOpen ? "Cancel" : "Change Password"}
+            </Button>
+          </div>
+
+          {pwOpen && (
+            <form onSubmit={handleChangePassword} className="mt-5 space-y-4 border-t pt-5">
+              {pwSuccess && (
+                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg">
+                  <CheckCircle className="h-4 w-4 shrink-0" /> Password updated successfully.
+                </div>
+              )}
+              {pwError && (
+                <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
+                  <AlertCircle className="h-4 w-4 shrink-0" /> {pwError}
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="pw-new">New password</Label>
+                <div className="relative">
+                  <Input
+                    id="pw-new"
+                    type={pwShow ? "text" : "password"}
+                    placeholder="At least 6 characters"
+                    value={pwNew}
+                    onChange={e => setPwNew(e.target.value)}
+                    className="pr-10"
+                    required
+                  />
+                  <button type="button" onClick={() => setPwShow(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    {pwShow ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pw-confirm">Confirm new password</Label>
+                <Input
+                  id="pw-confirm"
+                  type={pwShow ? "text" : "password"}
+                  placeholder="Re-enter new password"
+                  value={pwConfirm}
+                  onChange={e => setPwConfirm(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" variant="hero" size="sm" disabled={pwLoading}>
+                {pwLoading ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Updating…</> : "Update Password"}
+              </Button>
+            </form>
+          )}
         </div>
 
         {/* Email Preferences */}

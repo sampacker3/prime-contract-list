@@ -49,7 +49,7 @@ export default function ResetPassword() {
       setLoading(false);
     } else {
       setSuccess(true);
-      setTimeout(() => navigate("/contracts"), 2500);
+      setTimeout(() => navigate("/"), 2500);
     }
   };
 
@@ -64,7 +64,7 @@ export default function ResetPassword() {
             <div className="text-center">
               <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
               <h2 className="font-heading font-bold text-xl text-foreground mb-2">Password updated!</h2>
-              <p className="text-sm text-muted-foreground">Redirecting you to your contracts…</p>
+              <p className="text-sm text-muted-foreground">Redirecting home…</p>
             </div>
           ) : !ready ? (
             <div className="text-center">
