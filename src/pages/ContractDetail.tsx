@@ -146,51 +146,53 @@ export default function ContractDetail() {
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
             {/* Header */}
             <div className="p-6 border-b">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <h1 className="font-heading font-bold text-2xl text-foreground leading-snug">
-                      {contract.JobTitle ?? "Contract Role"}
-                    </h1>
-                    {isToday && (
-                      <Badge className="bg-green-500 text-white border-0 shrink-0">Posted Today</Badge>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {isPro ? (
-                      <>
-                        {contract.Company && (
-                          <span className="flex items-center gap-1.5">
-                            <Building2 className="h-4 w-4 shrink-0" />{contract.Company}
-                          </span>
-                        )}
-                        {contract.Location && (
-                          <span className="flex items-center gap-1.5">
-                            <MapPin className="h-4 w-4 shrink-0" />{contract.Location}
-                          </span>
-                        )}
-                        {contract.EmploymentType && (
-                          <span className="flex items-center gap-1.5">
-                            <Clock className="h-4 w-4 shrink-0" />{contract.EmploymentType}
-                          </span>
-                        )}
-                        {contract.WorkType && (
-                          <span className="flex items-center gap-1.5">
-                            <Briefcase className="h-4 w-4 shrink-0" />{contract.WorkType}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="blur-sm select-none opacity-50">████████ Ltd · London, UK · Contract</span>
-                    )}
-                    <span className="text-xs">
-                      {contract.created_at && formatPostedDate(contract.created_at)}
-                    </span>
-                  </div>
+              <div className="flex flex-col gap-4">
+                {/* Title + badge */}
+                <div className="flex items-start gap-2 flex-wrap">
+                  <h1 className="font-heading font-bold text-2xl text-foreground leading-snug">
+                    {contract.JobTitle ?? "Contract Role"}
+                  </h1>
+                  {isToday && (
+                    <Badge className="bg-green-500 text-white border-0 shrink-0 mt-1">Posted Today</Badge>
+                  )}
                 </div>
 
+                {/* Meta info */}
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  {isPro ? (
+                    <>
+                      {contract.Company && (
+                        <span className="flex items-center gap-1.5">
+                          <Building2 className="h-4 w-4 shrink-0" />{contract.Company}
+                        </span>
+                      )}
+                      {contract.Location && (
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="h-4 w-4 shrink-0" />{contract.Location}
+                        </span>
+                      )}
+                      {contract.EmploymentType && (
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 shrink-0" />{contract.EmploymentType}
+                        </span>
+                      )}
+                      {contract.WorkType && (
+                        <span className="flex items-center gap-1.5">
+                          <Briefcase className="h-4 w-4 shrink-0" />{contract.WorkType}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="blur-sm select-none opacity-50">████████ Ltd · London, UK · Contract</span>
+                  )}
+                  <span className="text-xs">
+                    {contract.created_at && formatPostedDate(contract.created_at)}
+                  </span>
+                </div>
+
+                {/* Action buttons — full width on mobile, auto on desktop */}
                 {isPro && (
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2">
                     {contract.URL && (
                       <Button variant="hero" size="sm" asChild>
                         <a href={contract.URL} target="_blank" rel="noopener noreferrer">
