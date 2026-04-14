@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
@@ -36,6 +36,44 @@ function formatPostedDate(createdAt: string): string {
   if (date >= todayStart) return `Today at ${timeStr}`;
   if (date >= yesterdayStart) return `Yesterday at ${timeStr}`;
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function ApplyWithAI({ size = "default" }: { size?: "sm" | "default" }) {
+  const [hover, setHover] = useState(false);
+  const pad = size === "sm" ? "px-3 py-1.5 text-xs gap-1.5" : "px-4 py-2 text-sm gap-2";
+  return (
+    <>
+      {/* Rotating gradient border wrapper */}
+      <div
+        className="relative shrink-0 rounded-xl p-[1.5px]"
+        style={{
+          background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4, #a855f7, #7c3aed)",
+          backgroundSize: "300% 300%",
+          animation: "ai-border-spin 3s ease infinite",
+          boxShadow: hover ? "0 0 16px 2px rgba(139,92,246,0.4), 0 0 32px 4px rgba(59,130,246,0.2)" : "0 0 10px 1px rgba(139,92,246,0.25)",
+          transition: "box-shadow 0.3s ease",
+        }}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        <button
+          className={`relative flex items-center font-semibold rounded-[10px] transition-all duration-300 ${pad}`}
+          style={{
+            background: hover
+              ? "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.1))"
+              : "rgba(139,92,246,0.07)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            color: hover ? "#a78bfa" : "#8b5cf6",
+          }}
+          onClick={() => alert("AI application feature coming soon!")}
+        >
+          <Sparkles className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} style={{ filter: "drop-shadow(0 0 4px rgba(139,92,246,0.6))" }} />
+          Apply with AI
+        </button>
+      </div>
+    </>
+  );
 }
 
 export default function ContractDetail() {
@@ -151,12 +189,17 @@ export default function ContractDetail() {
                   </div>
                 </div>
 
-                {isPro && contract.URL && (
-                  <Button variant="hero" size="sm" asChild className="shrink-0">
-                    <a href={contract.URL} target="_blank" rel="noopener noreferrer">
-                      Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                    </a>
-                  </Button>
+                {isPro && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    {contract.URL && (
+                      <Button variant="hero" size="sm" asChild>
+                        <a href={contract.URL} target="_blank" rel="noopener noreferrer">
+                          Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                    )}
+                    <ApplyWithAI size="sm" />
+                  </div>
                 )}
               </div>
             </div>
@@ -192,14 +235,19 @@ export default function ContractDetail() {
             </div>
 
             {/* Footer CTA for Pro users */}
-            {isPro && contract.URL && (
-              <div className="border-t bg-surface-subtle px-6 py-4 flex items-center justify-between gap-4">
+            {isPro && (
+              <div className="border-t bg-surface-subtle px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
                 <p className="text-sm text-muted-foreground">Ready to apply? Get in early.</p>
-                <Button variant="hero" asChild>
-                  <a href={contract.URL} target="_blank" rel="noopener noreferrer">
-                    Apply on LinkedIn <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                  </a>
-                </Button>
+                <div className="flex items-center gap-2">
+                  {contract.URL && (
+                    <Button variant="hero" asChild>
+                      <a href={contract.URL} target="_blank" rel="noopener noreferrer">
+                        Apply on LinkedIn <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                      </a>
+                    </Button>
+                  )}
+                  <ApplyWithAI />
+                </div>
               </div>
             )}
 
