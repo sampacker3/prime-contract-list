@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock } from "lucide-react";
+import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock, Sparkles } from "lucide-react";
+import { useCVExists } from "@/hooks/useCVExists";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -89,14 +90,18 @@ const ContractsPage = () => {
   const [searchParams] = useSearchParams();
   const initialQ = searchParams.get("q") ?? "";
   const [searchInput, setSearchInput] = useState(initialQ);
-  const [locationInput, setLocationInput] = useState("");
+  const [locationInput, setLocationInput] = useState("United Kingdom");
   const [searchTerm, setSearchTerm] = useState(initialQ);
   const [locationFilter, setLocationFilter] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"newest" | "relevance">("newest");
+  const [ir35Filter, setIr35Filter] = useState<"all" | "outside" | "inside">("all");
   const [page, setPage] = useState(0);
 
   const { user, isPro } = useAuth();
+  const { cvExists } = useCVExists();
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchWrapperRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
   const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page);
@@ -136,17 +141,44 @@ const ContractsPage = () => {
 
       {/* Search header */}
       <section className="border-b bg-surface-subtle">
-        <div className="container py-8">
-          <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground mb-6">Browse Contracts</h1>
-          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="container py-6 md:py-8">
+          <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground mb-4 md:mb-6">Browse Contracts</h1>
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-2 md:gap-3">
+            <div className="relative flex-1" ref={searchWrapperRef}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
               <Input
                 placeholder="Search by title, skill or technology..."
                 className="pl-10"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
               />
+              {/* AI CV suggestion — only shown when user is logged in and has a CV */}
+              {searchFocused && user && cvExists && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-left"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setSearchFocused(false);
+                      alert("CV-based search coming soon!");
+                    }}
+                  >
+                    <div
+                      className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)" }}
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Search for contracts based on my CV</p>
+                      <p className="text-xs text-muted-foreground">AI will match roles to your skills and experience</p>
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
             <div className="relative md:w-64">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -161,6 +193,38 @@ const ContractsPage = () => {
               <Search className="h-4 w-4 mr-1" /> Search
             </Button>
           </form>
+
+          {/* IR35 filter */}
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <span className="text-xs font-medium text-muted-foreground shrink-0">IR35 status:</span>
+            <div className="flex rounded-lg border overflow-hidden text-xs font-medium bg-background shrink-0">
+              {(
+                [
+                  { value: "all",     label: "All" },
+                  { value: "outside", label: "Outside IR35" },
+                  { value: "inside",  label: "Inside IR35" },
+                ] as const
+              ).map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => { setIr35Filter(value); setPage(0); }}
+                  className={`px-3 py-1.5 transition-colors border-r last:border-r-0 ${
+                    ir35Filter === value
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {ir35Filter !== "all" && (
+              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 shrink-0">
+                IR35 filtering coming soon
+              </span>
+            )}
+          </div>
         </div>
       </section>
 
@@ -182,7 +246,7 @@ const ContractsPage = () => {
 
       {/* Results */}
       <section className="container py-8 flex-1">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
           <p className="text-sm text-muted-foreground">
             {isLoading ? (
               "Loading contracts..."
@@ -200,7 +264,7 @@ const ContractsPage = () => {
             )}
           </p>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Sort by:</span>
+            <span className="text-xs text-muted-foreground shrink-0">Sort by:</span>
             <div className="flex rounded-lg border overflow-hidden text-xs font-medium">
               <button
                 className={`px-3 py-1.5 transition-colors ${sortBy === "newest" ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:bg-accent"}`}

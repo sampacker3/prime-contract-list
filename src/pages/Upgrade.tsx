@@ -291,7 +291,7 @@ export default function UpgradePage() {
       <Navbar />
 
       {/* ── Hero ─────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[hsl(220,25%,8%)] text-white">
+      <section className="relative overflow-hidden bg-background">
         {/* Animated gradient orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/20 blur-[120px] animate-pulse" />
@@ -308,7 +308,7 @@ export default function UpgradePage() {
             transition: "opacity 0.8s ease, transform 0.8s ease",
           }}
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary mb-8 backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary mb-8 backdrop-blur-sm">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
@@ -325,7 +325,7 @@ export default function UpgradePage() {
             {" "}the competition even sees them
           </h1>
 
-          <p className="text-xl md:text-2xl text-white/70 max-w-2xl mx-auto leading-relaxed mb-10">
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-10">
             ContractHub Pro scans 500+ sources every 10 minutes. While other contractors are browsing stale job boards, you're already applying.
           </p>
 
@@ -342,7 +342,7 @@ export default function UpgradePage() {
                 : <><CreditCard className="h-5 w-5 mr-2" /> Start Pro — {displayPrice}</>
               }
             </Button>
-            <p className="text-sm text-white/40 flex items-center gap-1.5">
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               <Lock className="h-3.5 w-3.5" /> Secure checkout via Stripe · Cancel anytime
             </p>
           </div>
@@ -352,7 +352,7 @@ export default function UpgradePage() {
           )}
 
           {/* Social proof mini-bar */}
-          <div className="flex flex-wrap justify-center gap-6 mt-10 text-sm text-white/50">
+          <div className="flex flex-wrap justify-center gap-6 mt-10 text-sm text-muted-foreground">
             {[
               { icon: Users, text: "8,200+ contractors" },
               { icon: Timer, text: "Updated every 10 mins" },
@@ -536,17 +536,17 @@ export default function UpgradePage() {
       </section>
 
       {/* ── Final CTA ────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[hsl(220,25%,8%)] text-white py-28">
+      <section className="relative overflow-hidden bg-surface-subtle border-t py-28">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[400px] w-[700px] rounded-full bg-primary/15 blur-[100px]" />
         </div>
         <div className="container relative text-center max-w-2xl">
-          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight">
+          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight text-foreground">
             The best contracts{" "}
             <span className="text-primary">don't wait.</span>
             <br />Neither should you.
           </h2>
-          <p className="text-white/60 text-lg mb-10">
+          <p className="text-muted-foreground text-lg mb-10">
             Join thousands of UK contractors who find roles faster and apply earlier with ContractHub Pro.
           </p>
           <Button
@@ -561,7 +561,7 @@ export default function UpgradePage() {
               : <>Get Pro Access — {displayPrice} <ArrowRight className="ml-2 h-5 w-5" /></>
             }
           </Button>
-          <p className="mt-4 text-sm text-white/30">No commitment. Cancel anytime.</p>
+          <p className="mt-4 text-sm text-muted-foreground">No commitment. Cancel anytime.</p>
         </div>
       </section>
 

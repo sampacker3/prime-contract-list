@@ -5,7 +5,61 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── Dark theme (default) ───────────────────────────────── */
   :root {
+    --background: 220 25% 8%;
+    --foreground: 210 40% 95%;
+
+    --card: 220 23% 11%;
+    --card-foreground: 210 40% 95%;
+
+    --popover: 220 23% 11%;
+    --popover-foreground: 210 40% 95%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 20% 16%;
+    --secondary-foreground: 210 40% 90%;
+
+    --muted: 220 20% 14%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 220 20% 16%;
+    --accent-foreground: 210 40% 95%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 18% 18%;
+    --input: 220 18% 16%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 220 25% 6%;
+    --sidebar-foreground: 210 40% 95%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 14%;
+    --sidebar-accent-foreground: 210 40% 95%;
+    --sidebar-border: 220 18% 18%;
+    --sidebar-ring: 221 83% 53%;
+
+    /* Custom tokens */
+    --hero-gradient: linear-gradient(135deg, hsl(221 83% 53%), hsl(221 83% 38%));
+    --surface-elevated: 220 23% 11%;
+    --surface-subtle: 220 22% 10%;
+    --text-heading: 210 40% 95%;
+    --text-body: 215 20% 70%;
+    --text-muted: 215 20% 55%;
+    --brand-blue: 221 83% 53%;
+    --brand-dark: 220 25% 8%;
+    --brand-grey: 216 15% 50%;
+  }
+
+  /* ── Light theme ────────────────────────────────────────── */
+  .light {
     --background: 0 0% 100%;
     --foreground: 220 20% 10%;
 
@@ -34,8 +88,6 @@
     --input: 216 20% 90%;
     --ring: 217 91% 50%;
 
-    --radius: 0.75rem;
-
     --sidebar-background: 220 20% 4%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 217 91% 55%;
@@ -56,36 +108,6 @@
     --brand-dark: 220 25% 8%;
     --brand-grey: 216 15% 62%;
   }
-
-  .dark {
-    --background: 220 20% 4%;
-    --foreground: 0 0% 95%;
-    --card: 220 15% 8%;
-    --card-foreground: 0 0% 95%;
-    --popover: 220 15% 8%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 217 91% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 12%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 220 15% 12%;
-    --muted-foreground: 215 14% 55%;
-    --accent: 217 91% 15%;
-    --accent-foreground: 217 91% 70%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 95%;
-    --border: 220 15% 15%;
-    --input: 220 15% 15%;
-    --ring: 217 91% 55%;
-    --sidebar-background: 220 20% 4%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 217 91% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 12%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 15% 15%;
-    --sidebar-ring: 217 91% 55%;
-  }
 }
 
 @layer base {
@@ -101,6 +123,13 @@
 }
 
 @layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
   .text-gradient-brand {
     @apply bg-clip-text text-transparent;
     background-image: linear-gradient(135deg, hsl(217 91% 50%), hsl(217 91% 35%));

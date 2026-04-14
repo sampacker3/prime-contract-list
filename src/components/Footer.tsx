@@ -36,7 +36,7 @@ const Footer = () => (
           <h4 className="font-heading font-semibold text-foreground mb-3">Legal</h4>
           <div className="space-y-2 text-sm text-muted-foreground">
             <span className="block">Privacy Policy</span>
-            <span className="block">Terms of Service</span>
+            <Link to="/terms" className="block hover:text-foreground transition-colors">Terms &amp; Conditions</Link>
           </div>
         </div>
       </div>

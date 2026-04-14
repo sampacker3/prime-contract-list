@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useEffect } from "react";
 
 function ScrollToTop() {
@@ -26,6 +27,8 @@ import ContractDetail from "./pages/ContractDetail.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import Upgrade from "./pages/Upgrade.tsx";
+import AboutApplyWithAI from "./pages/AboutApplyWithAI.tsx";
+import Terms from "./pages/Terms.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -39,6 +42,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <HelmetProvider>
+  <ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -59,12 +63,15 @@ const App = () => (
             <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
             <Route path="/upgrade" element={<Upgrade />} />
+            <Route path="/about-apply-with-ai" element={<AboutApplyWithAI />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ThemeProvider>
   </HelmetProvider>
 );
 

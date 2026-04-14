@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles, Info, Upload } from "lucide-react";
+import { useCVExists } from "@/hooks/useCVExists";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
@@ -36,6 +37,50 @@ function formatPostedDate(createdAt: string): string {
   if (date >= todayStart) return `Today at ${timeStr}`;
   if (date >= yesterdayStart) return `Yesterday at ${timeStr}`;
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// Dummy fit score for POC — replace with real CV analysis logic later
+const DUMMY_FIT_SCORE = 72;
+
+function CVFitBar({ score }: { score: number }) {
+  const isLow = score < 40;
+  const isMid = score >= 40 && score < 70;
+
+  const barColor = isLow
+    ? "from-orange-500 to-orange-400"
+    : isMid
+    ? "from-orange-400 to-amber-400"
+    : "from-amber-400 to-green-500";
+
+  const dotColor = isLow ? "bg-orange-500" : isMid ? "bg-amber-400" : "bg-green-500";
+
+  const message = isLow
+    ? "You may be missing some key skills for this contract"
+    : isMid
+    ? "You have some key skills for this role"
+    : "You are a great match for this role based on your skills";
+
+  const label = isLow ? "Low match" : isMid ? "Partial match" : "Strong match";
+  const labelColor = isLow ? "text-orange-500" : isMid ? "text-amber-500" : "text-green-600";
+
+  return (
+    <div className="mb-3">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-xs font-medium text-muted-foreground">CV fit for this role</span>
+        <span className={`text-xs font-semibold ${labelColor}`}>{label} · {score}%</span>
+      </div>
+      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-700`}
+          style={{ width: `${score}%` }}
+        />
+      </div>
+      <div className="flex items-center gap-1.5 mt-1.5">
+        <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${dotColor}`} />
+        <p className="text-xs text-muted-foreground">{message}</p>
+      </div>
+    </div>
+  );
 }
 
 function ApplyWithAI({ size = "default" }: { size?: "sm" | "default" }) {
@@ -80,6 +125,7 @@ export default function ContractDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isPro } = useAuth();
+  const { cvExists, cvLoading } = useCVExists();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { data: contract, isLoading, isError } = useContract(Number(id));
@@ -116,11 +162,11 @@ export default function ContractDetail() {
     <div className="min-h-screen flex flex-col">
       <Navbar />
 
-      <main className="flex-1 container py-8 max-w-3xl">
+      <main className="flex-1 container py-4 md:py-8 max-w-3xl">
         {/* Back */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3 md:mb-6 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
@@ -185,22 +231,53 @@ export default function ContractDetail() {
                   ) : (
                     <span className="blur-sm select-none opacity-50">████████ Ltd · London, UK · Contract</span>
                   )}
-                  <span className="text-xs">
-                    {contract.created_at && formatPostedDate(contract.created_at)}
-                  </span>
+                  {contract.created_at && (
+                    <span className="inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {formatPostedDate(contract.created_at)}
+                    </span>
+                  )}
                 </div>
 
-                {/* Action buttons — full width on mobile, auto on desktop */}
+                {/* CV fit bar + action buttons */}
                 {isPro && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {contract.URL && (
-                      <Button variant="hero" size="sm" asChild>
-                        <a href={contract.URL} target="_blank" rel="noopener noreferrer">
-                          Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                        </a>
-                      </Button>
+                  <div>
+                    {/* CV fit: show bar if CV uploaded, prompt if not */}
+                    {!cvLoading && (
+                      cvExists
+                        ? <CVFitBar score={DUMMY_FIT_SCORE} />
+                        : (
+                          <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2 mb-3">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Upload className="h-3.5 w-3.5 shrink-0 text-primary" />
+                              <span>Upload your CV for automated contract fit analysis</span>
+                            </div>
+                            <Link
+                              to="/account"
+                              className="text-xs font-medium text-primary hover:underline shrink-0"
+                            >
+                              Upload CV →
+                            </Link>
+                          </div>
+                        )
                     )}
-                    <ApplyWithAI size="sm" />
+                    <div className="flex flex-wrap items-center gap-2">
+                      {contract.URL && (
+                        <Button variant="hero" size="sm" asChild>
+                          <a href={contract.URL} target="_blank" rel="noopener noreferrer">
+                            Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      )}
+                      <ApplyWithAI size="sm" />
+                      <Link
+                        to="/about-apply-with-ai"
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Info className="h-3 w-3" />
+                        What is Apply with AI?
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>

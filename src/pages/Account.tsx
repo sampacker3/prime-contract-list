@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle, LogOut, FileText, Upload, Trash2, Download, Loader2, Lock, Eye, EyeOff } from "lucide-react";
+import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle, LogOut, FileText, Upload, Trash2, Download, Loader2, Lock, Eye, EyeOff, CalendarDays, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle } from "lucide-react";
@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { supabase } from "@/lib/supabase";
 import { useProPrice } from "@/hooks/useProPrice";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const CV_BUCKET = "cvs";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -31,26 +32,29 @@ const AccountPage = () => {
   const { priceString } = useProPrice();
   const displayPrice = priceString ?? "£29.99/month";
 
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const queryClient = useQueryClient();
   const [stripeLoading, setStripeLoading] = useState<'checkout' | 'portal' | null>(null);
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+
+  const { data: profile } = useQuery<Profile | null>({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id')
+        .eq('id', user!.id)
+        .single();
+      return (data as Profile) ?? null;
+    },
+    enabled: !!user,
+    staleTime: 30 * 1000, // show cached data instantly, background-refresh after 30s
+  });
 
   const [cvName, setCvName] = useState<string | null>(null);
   const [cvUploading, setCvUploading] = useState(false);
   const [cvDeleting, setCvDeleting] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
-
-  // Fetch real profile / subscription data
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from('profiles')
-      .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id')
-      .eq('id', user.id)
-      .single()
-      .then(({ data }) => { if (data) setProfile(data as Profile); });
-  }, [user]);
 
   // Read ?checkout= param — poll profile until webhook activates subscription
   useEffect(() => {
@@ -63,19 +67,14 @@ const AccountPage = () => {
     const maxAttempts = 12; // poll every 2s for up to 24s
 
     const poll = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id')
-        .eq('id', user.id)
-        .single();
+      // Invalidate so React Query re-fetches fresh data from Supabase
+      await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      const cached = queryClient.getQueryData<Profile | null>(['profile', user.id]);
 
-      if (data) {
-        setProfile(data as Profile);
-        if ((data as Profile).subscription_active) {
-          clearInterval(interval);
-          setTimeout(() => setCheckoutSuccess(false), 8000);
-          return;
-        }
+      if (cached?.subscription_active) {
+        clearInterval(interval);
+        setTimeout(() => setCheckoutSuccess(false), 8000);
+        return;
       }
 
       attempts++;
@@ -364,24 +363,38 @@ const AccountPage = () => {
 
           {profile?.subscription_active ? (
             <>
-              <div className="rounded-lg bg-accent/50 p-4 mb-4">
+              {/* Plan status */}
+              <div className="rounded-lg bg-accent/50 p-4 mb-3">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-heading font-semibold text-foreground capitalize">
-                        {profile.subscription_plan} Plan
-                      </span>
-                      <Badge className="bg-primary text-primary-foreground text-xs">Active</Badge>
-                    </div>
-                    {profile.subscription_renews_at && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {displayPrice} · Renews {new Date(profile.subscription_renews_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <span className="font-heading font-semibold text-foreground capitalize">
+                      {profile.subscription_plan} Plan
+                    </span>
+                    <Badge className="bg-primary text-primary-foreground text-xs">Active</Badge>
                   </div>
                   <CheckCircle className="h-5 w-5 text-primary" />
                 </div>
               </div>
+
+              {/* Billing details rows */}
+              <div className="divide-y rounded-lg border mb-4">
+                <div className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-muted-foreground">Monthly price</span>
+                  <span className="text-sm font-semibold text-foreground">{displayPrice}</span>
+                </div>
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    Next billing date
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">
+                    {profile.subscription_renews_at
+                      ? new Date(profile.subscription_renews_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                      : '—'}
+                  </span>
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button variant="hero" size="sm" onClick={handleManageBilling} disabled={stripeLoading === 'portal'}>
                   {stripeLoading === 'portal'
@@ -390,9 +403,19 @@ const AccountPage = () => {
                   }
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                Billing is handled securely via Stripe. Click "Manage Billing" to update your payment method, change plan, or download invoices.
-              </p>
+
+              <div className="flex items-start gap-2 mt-3 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2.5">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <p>
+                  You can cancel your subscription at any time via "Manage Billing". Your Pro access will remain active until{" "}
+                  <span className="font-medium text-foreground">
+                    {profile.subscription_renews_at
+                      ? new Date(profile.subscription_renews_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                      : 'the end of your billing period'}
+                  </span>
+                  . No refunds are issued for the remaining period.
+                </p>
+              </div>
             </>
           ) : (
             <>

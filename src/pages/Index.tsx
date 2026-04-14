@@ -1,13 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import { useCVExists } from "@/hooks/useCVExists";
 import { useQuery } from "@tanstack/react-query";
 import AuthModal from "@/components/AuthModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProPrice } from "@/hooks/useProPrice";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   Search, ArrowRight, Bell, FileText, Send,
   Zap, Shield, TrendingUp, Clock, Users, Timer,
-  Star, CheckCircle, ChevronDown, ChevronUp, Lock, CreditCard,
+  Star, CheckCircle, ChevronDown, ChevronUp, Lock, CreditCard, Sparkles,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -294,14 +296,14 @@ function StepItem({ step, index, isLast }: { step: typeof steps[0]; index: numbe
 function TestimonialCard({ t, index }: { t: typeof testimonials[0]; index: number }) {
   const { ref, visible } = useScrollReveal();
   return (
-    <div ref={ref} className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 flex flex-col gap-4"
+    <div ref={ref} className="rounded-2xl border border-border bg-card backdrop-blur-sm p-6 flex flex-col gap-4"
       style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(24px)", transition: "opacity 0.6s ease, transform 0.6s ease", transitionDelay: `${index * 120}ms` }}
     >
       <div className="flex gap-0.5">{Array.from({ length: t.stars }).map((_, i) => <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />)}</div>
-      <p className="text-sm text-white/80 leading-relaxed italic">"{t.quote}"</p>
-      <div className="mt-auto pt-4 border-t border-white/10">
-        <p className="font-semibold text-sm text-white">{t.name}</p>
-        <p className="text-xs text-white/50">{t.role}</p>
+      <p className="text-sm text-foreground/80 leading-relaxed italic">"{t.quote}"</p>
+      <div className="mt-auto pt-4 border-t border-border">
+        <p className="font-semibold text-sm text-foreground">{t.name}</p>
+        <p className="text-xs text-muted-foreground">{t.role}</p>
       </div>
     </div>
   );
@@ -324,9 +326,13 @@ function FaqItem({ faq }: { faq: typeof faqs[0] }) {
 
 const Index = () => {
   const { user, isPro } = useAuth();
+  const { cvExists } = useCVExists();
   const navigate = useNavigate();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [heroSearch, setHeroSearch] = useState("");
+  const [heroSearchFocused, setHeroSearchFocused] = useState(false);
   const heroCountUp = useCountUp(700);
   const { priceString, priceData } = useProPrice();
   const displayPrice = priceString ?? "£29.99/month";
@@ -347,41 +353,34 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO
-        title="ContractHub — The UK's #1 IT Contract Search Engine"
+        title="ContractHub — Find IT Contract Roles Across the UK"
         description="Find your next IT contract in the UK. ContractHub aggregates thousands of contract roles from hundreds of sources, updated in real-time. Search by role, location, and rate."
         canonical="/"
-        jsonLd={{ "@context": "https://schema.org", "@type": "WebSite", "name": "ContractHub", "url": "https://contracthub.co.uk", "description": "The UK's #1 IT contract search engine.", "potentialAction": { "@type": "SearchAction", "target": "https://contracthub.co.uk/contracts?q={search_term_string}", "query-input": "required name=search_term_string" } }}
+        jsonLd={{ "@context": "https://schema.org", "@type": "WebSite", "name": "ContractHub", "url": "https://contracthub.co.uk", "description": "Find IT contract roles across the UK, updated in real-time.", "potentialAction": { "@type": "SearchAction", "target": "https://contracthub.co.uk/contracts?q={search_term_string}", "query-input": "required name=search_term_string" } }}
       />
       <Navbar />
 
       {/* ── 1. HERO — dark ───────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[hsl(220,25%,8%)] text-white">
+      <section className="relative overflow-hidden bg-background text-foreground">
         {/* Ambient orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/20 blur-[120px] animate-pulse" />
           <div className="absolute -bottom-20 -left-40 h-[400px] w-[400px] rounded-full bg-primary/10 blur-[100px]" style={{ animation: "pulse 4s ease-in-out infinite 1.5s" }} />
         </div>
 
-        <div className="container relative pt-16 pb-8 md:pt-24 md:pb-10">
+        <div className="container relative pt-6 pb-8 md:pt-12 md:pb-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left */}
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-primary mb-6 backdrop-blur-sm">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-                </span>
-                The UK's #1 Contract Search Engine
-              </div>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold leading-[1.05] tracking-tight text-white">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold leading-[1.05] tracking-tight text-foreground">
                 Find your next<br />
                 <RotatingText /><br />
                 contract now
               </h1>
-              <p className="mt-6 text-lg md:text-xl text-white/60 max-w-xl leading-relaxed">
+              <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
                 We pull contract opportunities from hundreds of websites every 10 mins ready for you to apply early with no hassle.
               </p>
-              <p className="mt-5 text-2xl md:text-3xl font-heading font-bold text-white" ref={heroCountUp.ref}>
+              <p className="mt-5 text-2xl md:text-3xl font-heading font-bold text-foreground" ref={heroCountUp.ref}>
                 Over{" "}
                 <span className="text-primary underline decoration-primary decoration-2 underline-offset-4">
                   {heroCountUp.count}
@@ -394,7 +393,7 @@ const Index = () => {
                 </Button>
                 {!user && (
                   <Button size="lg" onClick={() => setShowAuthModal(true)}
-                    className="border border-white/20 bg-white/5 text-white hover:bg-white/10 backdrop-blur-sm"
+                    className="border border-foreground/20 bg-foreground/5 text-foreground hover:bg-foreground/10 backdrop-blur-sm"
                   >
                     Log In <ArrowRight className="ml-1 h-4 w-4" />
                   </Button>
@@ -402,33 +401,68 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Right: search card — glass style */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-2xl p-6">
-              <p className="font-heading font-bold text-lg text-white mb-1">Search contracts</p>
-              <p className="text-sm text-white/50 mb-4">Find your next role by keyword, skill or technology</p>
+            {/* Right: search card — glass style with AI liquid border */}
+            <div
+              className="rounded-2xl p-[1.5px]"
+              style={{
+                background: "linear-gradient(135deg, rgba(124,58,237,0.6), rgba(59,130,246,0.4), rgba(6,182,212,0.3), rgba(168,85,247,0.5), rgba(124,58,237,0.6))",
+                backgroundSize: "300% 300%",
+                animation: "ai-border-spin 6s ease infinite",
+                boxShadow: "0 0 32px 2px rgba(124,58,237,0.15), 0 0 64px 4px rgba(59,130,246,0.08)",
+              }}
+            >
+            <div className="rounded-2xl p-6 bg-card">
+              <p className="font-heading font-bold text-lg text-foreground mb-1">Search contracts</p>
+              <p className="text-sm text-muted-foreground mb-4">Find your next role by keyword, skill or technology</p>
               <form onSubmit={(e) => { e.preventDefault(); handleHeroSearch(); }} className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                   <Input
                     placeholder="e.g. Python, AWS, DevOps..."
-                    className="pl-9 bg-white/10 border-white/10 text-white placeholder:text-white/30 focus:border-primary focus:bg-white/15"
+                    className="pl-9"
                     value={heroSearch}
                     onChange={(e) => setHeroSearch(e.target.value)}
+                    onFocus={() => setHeroSearchFocused(true)}
+                    onBlur={() => setTimeout(() => setHeroSearchFocused(false), 150)}
                   />
+                  {heroSearchFocused && user && cvExists && (
+                    <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-left"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setHeroSearchFocused(false);
+                          alert("CV-based search coming soon!");
+                        }}
+                      >
+                        <div
+                          className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+                          style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)" }}
+                        >
+                          <Sparkles className="h-3.5 w-3.5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Search for contracts based on my CV</p>
+                          <p className="text-xs text-muted-foreground">AI will match roles to your skills and experience</p>
+                        </div>
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <Button type="submit" variant="hero">Search</Button>
               </form>
               <div className="mt-4">
-                <p className="text-xs text-white/30 mb-2">Popular searches</p>
-                <div className="flex flex-wrap gap-2">
+                <p className="text-xs text-muted-foreground mb-2">Popular searches</p>
+                <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
                   {POPULAR_SEARCHES.map((s) => (
                     <button key={s} type="button" onClick={() => handleHeroSearch(s)}
-                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/60 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                      className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors shrink-0"
                     >{s}</button>
                   ))}
                 </div>
               </div>
-              <div className="mt-5 flex items-center gap-2 text-xs text-white/30 border-t border-white/10 pt-4">
+              <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground border-t border-border pt-4">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
@@ -436,14 +470,15 @@ const Index = () => {
                 Updated every 10 minutes from 500+ sources
               </div>
             </div>
+            </div>
           </div>
         </div>
 
         {/* Skills ticker */}
         <div className="relative overflow-hidden mt-8 pb-10">
           <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-[hsl(220,25%,8%)] to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-[hsl(220,25%,8%)] to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-background to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-background to-transparent" />
             <div className="flex gap-3" style={{ animation: "marquee-left 65s linear infinite", width: "max-content" }}>
               {[
                 "Python","MLOps","Machine Learning","AI / LLMs","Data Engineer","BI Developer",
@@ -459,7 +494,7 @@ const Index = () => {
                 "Power BI","Tableau","Salesforce","SAP","iOS / Swift","Android / Kotlin",
                 "Cyber Security","Penetration Testing","Cloud Architecture","Site Reliability",
               ].map((skill, i) => (
-                <span key={i} className="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/50 whitespace-nowrap">{skill}</span>
+                <span key={i} className="shrink-0 rounded-full border border-border bg-muted px-4 py-1.5 text-xs font-medium text-muted-foreground whitespace-nowrap">{skill}</span>
               ))}
             </div>
           </div>
@@ -533,15 +568,15 @@ const Index = () => {
       </section>
 
       {/* ── 7. TESTIMONIALS — dark ───────────────────────── */}
-      <section className="bg-[hsl(220,25%,8%)] py-24 relative overflow-hidden">
+      <section className="bg-muted py-24 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[400px] w-[700px] rounded-full bg-primary/10 blur-[120px]" />
         </div>
         <div className="container relative">
           <div className="text-center max-w-xl mx-auto mb-14">
-            <Badge className="mb-4 text-xs uppercase tracking-widest font-semibold bg-white/10 text-white border-white/10 hover:bg-white/10">Real contractors. Real results.</Badge>
-            <h2 className="text-3xl md:text-4xl font-heading font-bold text-white">Contractors landing roles every week</h2>
-            <p className="mt-3 text-white/50">Don't take our word for it — here's what Pro members say.</p>
+            <Badge className="mb-4 text-xs uppercase tracking-widest font-semibold bg-foreground/10 text-foreground border-foreground/10 hover:bg-foreground/10">Real contractors. Real results.</Badge>
+            <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">Contractors landing roles every week</h2>
+            <p className="mt-3 text-muted-foreground">Don't take our word for it — here's what Pro members say.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {testimonials.map((t, i) => <TestimonialCard key={t.name} t={t} index={i} />)}
@@ -594,17 +629,17 @@ const Index = () => {
       </section>
 
       {/* ── 10. FINAL CTA — dark ─────────────────────────── */}
-      <section className="bg-[hsl(220,25%,8%)] text-white py-28 relative overflow-hidden">
+      <section className="bg-surface-subtle border-t py-28 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[400px] w-[700px] rounded-full bg-primary/15 blur-[100px]" />
         </div>
         <div className="container relative text-center max-w-2xl">
-          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight">
+          <h2 className="text-4xl md:text-5xl font-heading font-bold mb-6 leading-tight text-foreground">
             The best contracts{" "}
             <span className="text-primary">don't wait.</span>
             <br />Neither should you.
           </h2>
-          <p className="text-white/60 text-lg mb-10">Join thousands of UK contractors who find roles faster and apply earlier with ContractHub.</p>
+          <p className="text-muted-foreground text-lg mb-10">Join thousands of UK contractors who find roles faster and apply earlier with ContractHub.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="lg" onClick={handleExplore}
               className="text-base px-10 h-14 rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-all hover:scale-105"
@@ -613,7 +648,7 @@ const Index = () => {
             </Button>
             {!isPro && (
               <Button asChild size="lg"
-                className="text-base px-10 h-14 rounded-xl border border-white/20 bg-white/5 text-white hover:bg-white/10 backdrop-blur-sm"
+                className="text-base px-10 h-14 rounded-xl border border-border bg-card text-foreground hover:bg-muted transition-colors"
               >
                 <Link to="/upgrade">View Pro Plan <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>

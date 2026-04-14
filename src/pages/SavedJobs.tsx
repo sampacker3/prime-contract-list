@@ -1,5 +1,6 @@
-import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
@@ -31,6 +32,7 @@ function formatPostedDate(createdAt: string): string {
 export default function SavedJobsPage() {
   const { savedContracts, savedLoading, toggleSave, savedJobIds } = useSavedJobs();
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   const toggleExpand = (id: number) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -111,7 +113,8 @@ export default function SavedJobsPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
+                            <Clock className="h-3 w-3" />
                             {formatPostedDate(contract.created_at)}
                           </span>
                           <Button
@@ -141,10 +144,20 @@ export default function SavedJobsPage() {
 
                     {expanded && (
                       <div className="px-5 pb-5 border-t pt-4">
-                        {contract.Description
-                          ? <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{contract.Description}</p>
-                          : <p className="text-sm text-muted-foreground italic">No description available.</p>
-                        }
+                        {contract.Description ? (
+                          <p className="text-sm text-foreground whitespace-pre-line leading-relaxed line-clamp-4 mb-4">
+                            {contract.Description}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic mb-4">No description available.</p>
+                        )}
+                        <Button
+                          variant="hero"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/contract/${contract.id}`); }}
+                        >
+                          See More <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     )}
                   </div>
