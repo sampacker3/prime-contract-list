@@ -236,22 +236,6 @@ export default function ContractDetail() {
               )}
             </div>
 
-            {/* Footer CTA for Pro users */}
-            {isPro && (
-              <div className="border-t bg-surface-subtle px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
-                <p className="text-sm text-muted-foreground">Ready to apply? Get in early.</p>
-                <div className="flex items-center gap-2">
-                  {contract.URL && (
-                    <Button variant="hero" asChild>
-                      <a href={contract.URL} target="_blank" rel="noopener noreferrer">
-                        Apply on LinkedIn <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                      </a>
-                    </Button>
-                  )}
-                  <ApplyWithAI />
-                </div>
-              </div>
-            )}
 
             {/* Footer CTA for free logged-in users */}
             {!isPro && user && (
