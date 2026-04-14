@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { supabase } from "@/lib/supabase";
+import { useProPrice } from "@/hooks/useProPrice";
 
 const CV_BUCKET = "cvs";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -27,6 +28,8 @@ const AccountPage = () => {
   const { user, signOut, updatePassword } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { priceString } = useProPrice();
+  const displayPrice = priceString ?? "£29.99/month";
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stripeLoading, setStripeLoading] = useState<'checkout' | 'portal' | null>(null);
@@ -372,7 +375,7 @@ const AccountPage = () => {
                     </div>
                     {profile.subscription_renews_at && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        £29.99/month · Renews {new Date(profile.subscription_renews_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {displayPrice} · Renews {new Date(profile.subscription_renews_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
                     )}
                   </div>
@@ -407,7 +410,7 @@ const AccountPage = () => {
               <Button variant="hero" onClick={handleUpgrade} disabled={stripeLoading === 'checkout'}>
                 {stripeLoading === 'checkout'
                   ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Redirecting to Stripe…</>
-                  : <><CreditCard className="h-4 w-4 mr-1" /> Upgrade to Pro — £29.99/month</>
+                  : <><CreditCard className="h-4 w-4 mr-1" /> Upgrade to Pro — {displayPrice}</>
                 }
               </Button>
               <p className="text-xs text-muted-foreground mt-3">Secure checkout via Stripe. Cancel anytime.</p>

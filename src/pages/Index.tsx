@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AuthModal from "@/components/AuthModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProPrice } from "@/hooks/useProPrice";
 import {
   Search, ArrowRight, Bell, FileText, Send,
   Zap, Shield, TrendingUp, Clock, Users, Timer,
@@ -327,6 +328,10 @@ const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [heroSearch, setHeroSearch] = useState("");
   const heroCountUp = useCountUp(700);
+  const { priceString, priceData } = useProPrice();
+  const displayPrice = priceString ?? "£29.99/month";
+  const displayAmount = priceData ? `${priceData.currency === "gbp" ? "£" : "$"}${(priceData.amount / 100).toFixed(2).replace(/\.00$/, "")}` : "£29.99";
+  const displayInterval = priceData?.interval ?? "month";
 
   const handleExplore = () => {
     if (user) navigate("/contracts");
@@ -556,8 +561,8 @@ const Index = () => {
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 max-w-sm mx-auto mb-8">
             <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-1">ContractHub Pro</p>
             <div className="flex items-end justify-center gap-1 mb-1">
-              <span className="text-5xl font-heading font-bold text-white">£29.99</span>
-              <span className="text-white/50 mb-2">/month</span>
+              <span className="text-5xl font-heading font-bold text-white">{displayAmount}</span>
+              <span className="text-white/50 mb-2">/{displayInterval}</span>
             </div>
             <p className="text-xs text-white/40 mb-6">Cancel anytime</p>
             <ul className="space-y-2 text-left mb-6">

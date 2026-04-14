@@ -11,6 +11,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProPrice } from "@/hooks/useProPrice";
 import { supabase } from "@/lib/supabase";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -272,6 +273,11 @@ export default function UpgradePage() {
     }
   };
 
+  const { priceString, priceData } = useProPrice();
+  const displayPrice = priceString ?? "£29.99/month";
+  const displayAmount = priceData ? `${priceData.currency === "gbp" ? "£" : "$"}${(priceData.amount / 100).toFixed(2).replace(/\.00$/, "")}` : "£29.99";
+  const displayInterval = priceData?.interval ?? "month";
+
   const { ref: heroRef, visible: heroVisible } = useScrollReveal(0);
   const { ref: pricingRef, visible: pricingVisible } = useScrollReveal();
 
@@ -279,7 +285,7 @@ export default function UpgradePage() {
     <div className="min-h-screen flex flex-col">
       <SEO
         title="Upgrade to Pro — ContractHub"
-        description="Get full access to every UK IT contract the moment it's posted. Upgrade to ContractHub Pro for £29.99/month."
+        description="Get full access to every UK IT contract the moment it's posted. Upgrade to ContractHub Pro."
         canonical="/upgrade"
       />
       <Navbar />
@@ -333,7 +339,7 @@ export default function UpgradePage() {
             >
               {stripeLoading
                 ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Redirecting to checkout…</>
-                : <><CreditCard className="h-5 w-5 mr-2" /> Start Pro — £29.99/month</>
+                : <><CreditCard className="h-5 w-5 mr-2" /> Start Pro — {displayPrice}</>
               }
             </Button>
             <p className="text-sm text-white/40 flex items-center gap-1.5">
@@ -465,10 +471,10 @@ export default function UpgradePage() {
               </div>
 
               <div className="flex items-end gap-1 mb-2">
-                <span className="text-5xl font-heading font-bold text-foreground">£29.99</span>
-                <span className="text-muted-foreground mb-2">/month</span>
+                <span className="text-5xl font-heading font-bold text-foreground">{displayAmount}</span>
+                <span className="text-muted-foreground mb-2">/{displayInterval}</span>
               </div>
-              <p className="text-xs text-muted-foreground mb-8">Billed monthly · Cancel anytime</p>
+              <p className="text-xs text-muted-foreground mb-8">Billed {displayInterval}ly · Cancel anytime</p>
 
               <ul className="space-y-3 mb-8">
                 {[
@@ -500,7 +506,7 @@ export default function UpgradePage() {
               >
                 {stripeLoading
                   ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Redirecting…</>
-                  : <><CreditCard className="h-4 w-4 mr-2" /> Upgrade Now — £29.99/month</>
+                  : <><CreditCard className="h-4 w-4 mr-2" /> Upgrade Now — {displayPrice}</>
                 }
               </Button>
 
@@ -552,7 +558,7 @@ export default function UpgradePage() {
           >
             {stripeLoading
               ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Redirecting…</>
-              : <>Get Pro Access — £29.99/month <ArrowRight className="ml-2 h-5 w-5" /></>
+              : <>Get Pro Access — {displayPrice} <ArrowRight className="ml-2 h-5 w-5" /></>
             }
           </Button>
           <p className="mt-4 text-sm text-white/30">No commitment. Cancel anytime.</p>
