@@ -27,7 +27,7 @@ export function useProPrice() {
       if (!res.ok) throw new Error("Failed to fetch price");
       return res.json();
     },
-    staleTime: 60 * 60 * 1000, // cache for 1 hour
+    staleTime: 5 * 60 * 1000, // cache for 5 minutes
   });
 
   return {
