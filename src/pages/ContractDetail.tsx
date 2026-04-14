@@ -40,7 +40,7 @@ function formatPostedDate(createdAt: string): string {
 
 function ApplyWithAI({ size = "default" }: { size?: "sm" | "default" }) {
   const [hover, setHover] = useState(false);
-  const pad = size === "sm" ? "px-3 py-1.5 text-xs gap-1.5" : "px-4 py-2 text-sm gap-2";
+  const pad = size === "sm" ? "px-3 py-1.5 text-xs gap-1.5 h-8" : "px-4 py-2 text-sm gap-2 h-9";
   return (
     <>
       {/* Rotating gradient border wrapper */}
@@ -64,7 +64,7 @@ function ApplyWithAI({ size = "default" }: { size?: "sm" | "default" }) {
               : "rgba(139,92,246,0.07)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
-            color: hover ? "#a78bfa" : "#8b5cf6",
+            color: "#ffffff",
           }}
           onClick={() => alert("AI application feature coming soon!")}
         >
