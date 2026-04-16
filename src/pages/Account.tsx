@@ -104,6 +104,23 @@ const AccountPage = () => {
     return json;
   };
 
+  // Generic edge function caller — doesn't require a url in the response
+  const callEdgeFunctionRaw = async (fn: string, body?: Record<string, unknown>): Promise<{ ok: boolean; data?: unknown; error?: string }> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`,
+        apikey: SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.error || data.message || `Request failed (${res.status})` };
+    return { ok: true, data };
+  };
+
   const handleUpgrade = async () => {
     setStripeError(null);
     setStripeLoading('checkout');
@@ -180,17 +197,8 @@ const AccountPage = () => {
 
       // Step 2: Call edge function — parses PDF, embeds chunks, stores in usercvs
       // Spinner stays active throughout since this is awaited
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/process-cv`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          apikey: SUPABASE_ANON_KEY,
-          "Content-Type": "application/json",
-        },
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "CV processing failed");
+      const { ok, error: fnError } = await callEdgeFunctionRaw("process-cv");
+      if (!ok) throw new Error(fnError ?? "CV processing failed");
     } catch (err: unknown) {
       setCvError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
