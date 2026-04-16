@@ -193,11 +193,16 @@ export default function ContractDetail() {
             {/* Header */}
             <div className="p-6 border-b">
               <div className="flex flex-col gap-4">
-                {/* Title + badge */}
+                {/* Title + pay rate + badge */}
                 <div className="flex items-start gap-2 flex-wrap">
                   <h1 className="font-heading font-bold text-2xl text-foreground leading-snug">
                     {contract.JobTitle ?? "Contract Role"}
                   </h1>
+                  {isPro && contract.PayRate && (
+                    <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400 shrink-0 mt-1">
+                      {contract.PayRate}
+                    </span>
+                  )}
                   {isToday && (
                     <Badge className="bg-green-500 text-white border-0 shrink-0 mt-1">Posted Today</Badge>
                   )}
@@ -225,6 +230,11 @@ export default function ContractDetail() {
                       {contract.WorkType && (
                         <span className="flex items-center gap-1.5">
                           <Briefcase className="h-4 w-4 shrink-0" />{contract.WorkType}
+                        </span>
+                      )}
+                      {contract.IR35Status && (
+                        <span className="flex items-center gap-1.5">
+                          {contract.IR35Status}
                         </span>
                       )}
                     </>

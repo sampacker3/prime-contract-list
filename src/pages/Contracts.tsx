@@ -16,9 +16,9 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 
 const PAGE_SIZE = 25;
 
-function useContracts(search: string, location: string, page: number) {
+function useContracts(search: string, location: string, page: number, ir35: "all" | "outside" | "inside") {
   return useQuery({
-    queryKey: ["contracts", search, location, page],
+    queryKey: ["contracts", search, location, page, ir35],
     queryFn: async () => {
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -37,6 +37,12 @@ function useContracts(search: string, location: string, page: number) {
 
       if (location) {
         query = query.ilike("Location", `%${location}%`);
+      }
+
+      if (ir35 === "outside") {
+        query = query.eq("IR35Status", "Outside IR35");
+      } else if (ir35 === "inside") {
+        query = query.eq("IR35Status", "Inside IR35");
       }
 
       const { data, error, count } = await query;
@@ -104,7 +110,7 @@ const ContractsPage = () => {
   const searchWrapperRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
-  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page);
+  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page, ir35Filter);
   const raw = result?.data ?? [];
   const totalCount = result?.total ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -219,11 +225,6 @@ const ContractsPage = () => {
                 </button>
               ))}
             </div>
-            {ir35Filter !== "all" && (
-              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 shrink-0">
-                IR35 filtering coming soon
-              </span>
-            )}
           </div>
         </div>
       </section>
@@ -313,10 +314,15 @@ const ContractsPage = () => {
                   >
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="font-heading font-semibold text-foreground truncate">
                             {contract.JobTitle ?? "Untitled Role"}
                           </h3>
+                          {isPro && contract.PayRate && (
+                            <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400 shrink-0">
+                              {contract.PayRate}
+                            </span>
+                          )}
                           {postedToday && (
                             <Badge className="text-xs shrink-0 bg-green-500 hover:bg-green-500 text-white border-0">
                               Posted Today
@@ -336,6 +342,9 @@ const ContractsPage = () => {
                               )}
                               {contract.EmploymentType && (
                                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.EmploymentType}</span>
+                              )}
+                              {contract.IR35Status && (
+                                <span className="flex items-center gap-1">{contract.IR35Status}</span>
                               )}
                             </>
                           ) : (

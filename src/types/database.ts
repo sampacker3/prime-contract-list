@@ -15,6 +15,8 @@ export type Database = {
           PostedText: string | null
           Company: string | null
           LinkedInJobID: string | null
+          IR35Status: string | null
+          PayRate: string | null
         }
         Insert: Omit<Database['public']['Tables']['LinkedinScrapeResults']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['LinkedinScrapeResults']['Insert']>
