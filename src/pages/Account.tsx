@@ -168,6 +168,15 @@ const AccountPage = () => {
     try {
       const path = `${user.id}/cv.pdf`;
 
+      // Clear old parsed rows from usercvs before uploading new CV
+      if (cvName) {
+        const { error: delErr, count: delCount } = await supabase
+          .from("usercvs")
+          .delete({ count: "exact" })
+          .contains("metadata", { user_id: user.id });
+        console.log("[usercvs delete]", { delErr: delErr?.message, delCount });
+      }
+
       // Remove existing file first so we only need INSERT policy (no UPDATE needed)
       await supabase.storage.from(CV_BUCKET).remove([path]);
 
@@ -178,6 +187,11 @@ const AccountPage = () => {
 
       localStorage.setItem(`cv_filename_${user.id}`, file.name);
       setCvName(file.name);
+
+      // Trigger n8n webhook — fire and forget, don't block the UI
+      fetch(`https://sampacker.app.n8n.cloud/webhook/30357579-939b-46b8-a65a-3864d0c5eb46?user_id=${encodeURIComponent(user.id)}`, {
+        method: "GET",
+      }).catch(() => {/* silently ignore webhook errors */});
     } catch (err: unknown) {
       setCvError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -199,6 +213,11 @@ const AccountPage = () => {
     setCvDeleting(true);
     try {
       await supabase.storage.from(CV_BUCKET).remove([`${user.id}/cv.pdf`]);
+      const { error: delErr2, count: delCount2 } = await supabase
+        .from("usercvs")
+        .delete({ count: "exact" })
+        .contains("metadata", { user_id: user.id });
+      console.log("[usercvs delete on remove]", { delErr2: delErr2?.message, delCount2 });
       localStorage.removeItem(`cv_filename_${user.id}`);
       setCvName(null);
     } finally {
