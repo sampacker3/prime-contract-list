@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles, Info, Upload } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles, Info, Upload, Loader2 } from "lucide-react";
 import { useCVExists } from "@/hooks/useCVExists";
+import { useCVContractFit } from "@/hooks/useCVContractFit";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
@@ -38,9 +39,6 @@ function formatPostedDate(createdAt: string): string {
   if (date >= yesterdayStart) return `Yesterday at ${timeStr}`;
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
-
-// Dummy fit score for POC — replace with real CV analysis logic later
-const DUMMY_FIT_SCORE = 72;
 
 function CVFitBar({ score }: { score: number }) {
   const isLow = score < 40;
@@ -126,6 +124,7 @@ export default function ContractDetail() {
   const navigate = useNavigate();
   const { user, isPro } = useAuth();
   const { cvExists, cvLoading } = useCVExists();
+  const { score: fitScore, isLoading: fitLoading } = useCVContractFit(contract?.id);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { data: contract, isLoading, isError } = useContract(Number(id));
@@ -255,7 +254,14 @@ export default function ContractDetail() {
                     {/* CV fit: show bar if CV uploaded, prompt if not */}
                     {!cvLoading && (
                       cvExists
-                        ? <CVFitBar score={DUMMY_FIT_SCORE} />
+                        ? fitLoading || fitScore === null
+                          ? (
+                            <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Calculating your CV fit…
+                            </div>
+                          )
+                          : <CVFitBar score={fitScore} />
                         : (
                           <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2 mb-3">
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
