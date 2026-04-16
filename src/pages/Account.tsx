@@ -168,30 +168,29 @@ const AccountPage = () => {
     try {
       const path = `${user.id}/cv.pdf`;
 
-      // Clear old parsed rows from usercvs before uploading new CV
-      if (cvName) {
-        const { error: delErr, count: delCount } = await supabase
-          .from("usercvs")
-          .delete({ count: "exact" })
-          .contains("metadata", { user_id: user.id });
-        console.log("[usercvs delete]", { delErr: delErr?.message, delCount });
-      }
-
-      // Remove existing file first so we only need INSERT policy (no UPDATE needed)
-      await supabase.storage.from(CV_BUCKET).remove([path]);
-
+      // Step 1: Upload file to storage (upsert overwrites existing)
       const { error: uploadError } = await supabase.storage
         .from(CV_BUCKET)
-        .upload(path, file, { contentType: "application/pdf" });
+        .upload(path, file, { contentType: "application/pdf", upsert: true });
       if (uploadError) throw uploadError;
 
       localStorage.setItem(`cv_filename_${user.id}`, file.name);
       setCvName(file.name);
+      await queryClient.invalidateQueries({ queryKey: ["cv-exists", user.id] });
 
-      // Trigger n8n webhook — fire and forget, don't block the UI
-      fetch(`https://sampacker.app.n8n.cloud/webhook/30357579-939b-46b8-a65a-3864d0c5eb46?user_id=${encodeURIComponent(user.id)}`, {
-        method: "GET",
-      }).catch(() => {/* silently ignore webhook errors */});
+      // Step 2: Call edge function — parses PDF, embeds chunks, stores in usercvs
+      // Spinner stays active throughout since this is awaited
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/process-cv`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: SUPABASE_ANON_KEY,
+          "Content-Type": "application/json",
+        },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "CV processing failed");
     } catch (err: unknown) {
       setCvError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -212,13 +211,16 @@ const AccountPage = () => {
     if (!user) return;
     setCvDeleting(true);
     try {
-      await supabase.storage.from(CV_BUCKET).remove([`${user.id}/cv.pdf`]);
-      const { error: delErr2, count: delCount2 } = await supabase
-        .from("usercvs")
-        .delete({ count: "exact" })
-        .contains("metadata", { user_id: user.id });
-      console.log("[usercvs delete on remove]", { delErr2: delErr2?.message, delCount2 });
+      // Delete storage file and embeddings in parallel
+      await Promise.all([
+        supabase.storage.from(CV_BUCKET).remove([`${user.id}/cv.pdf`]),
+        supabase.from("usercvs").delete().contains("metadata", { user_id: user.id }),
+      ]);
+      // Brief pause to let Supabase propagate before UI allows a new upload
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       localStorage.removeItem(`cv_filename_${user.id}`);
+      // Bust the cv-exists cache so useCVExists reflects the deletion immediately
+      await queryClient.invalidateQueries({ queryKey: ["cv-exists", user.id] });
       setCvName(null);
     } finally {
       setCvDeleting(false);
@@ -337,7 +339,7 @@ const AccountPage = () => {
             >
               {cvUploading
                 ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Uploading…</>
-                : <><Upload className="h-4 w-4 mr-1" /> {cvName ? "Replace CV" : "Upload CV"}</>
+                : <><Upload className="h-4 w-4 mr-1" /> Upload CV</>
               }
             </Button>
             {cvName && (
