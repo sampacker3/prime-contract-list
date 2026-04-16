@@ -124,10 +124,10 @@ export default function ContractDetail() {
   const navigate = useNavigate();
   const { user, isPro } = useAuth();
   const { cvExists, cvLoading } = useCVExists();
-  const { score: fitScore, isLoading: fitLoading } = useCVContractFit(contract?.id);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { data: contract, isLoading, isError } = useContract(Number(id));
+  const { score: fitScore, isLoading: fitLoading } = useCVContractFit(contract?.id);
   const isToday = contract?.created_at
     ? new Date(contract.created_at) >= new Date(new Date().setHours(0, 0, 0, 0))
     : false;
