@@ -339,17 +339,19 @@ const AccountPage = () => {
           />
 
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="hero"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={cvUploading}
-            >
-              {cvUploading
-                ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Uploading…</>
-                : <><Upload className="h-4 w-4 mr-1" /> Upload CV</>
-              }
-            </Button>
+            {!cvName && (
+              <Button
+                variant="hero"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={cvUploading}
+              >
+                {cvUploading
+                  ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Uploading…</>
+                  : <><Upload className="h-4 w-4 mr-1" /> Upload CV</>
+                }
+              </Button>
+            )}
             {cvName && (
               <>
                 <Button variant="outline" size="sm" onClick={handleDownload}>
