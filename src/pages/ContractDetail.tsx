@@ -252,30 +252,25 @@ export default function ContractDetail() {
                 {isPro && (
                   <div>
                     {/* CV fit: show bar if CV uploaded, prompt if not */}
-                    {!cvLoading && (
-                      cvExists
-                        ? fitLoading || fitScore === null
-                          ? (
-                            <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              Calculating your CV fit…
-                            </div>
-                          )
-                          : <CVFitBar score={fitScore} />
-                        : (
-                          <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2 mb-3">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Upload className="h-3.5 w-3.5 shrink-0 text-primary" />
-                              <span>Upload your CV for automated contract fit analysis</span>
-                            </div>
-                            <Link
-                              to="/account"
-                              className="text-xs font-medium text-primary hover:underline shrink-0"
-                            >
-                              Upload CV →
-                            </Link>
-                          </div>
-                        )
+                    {!cvLoading && !cvExists && (
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2 mb-3">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Upload className="h-3.5 w-3.5 shrink-0 text-primary" />
+                          <span>Upload your CV for automated contract fit analysis</span>
+                        </div>
+                        <Link to="/account" className="text-xs font-medium text-primary hover:underline shrink-0">
+                          Upload CV →
+                        </Link>
+                      </div>
+                    )}
+                    {!cvLoading && cvExists && (fitLoading || fitScore === null) && (
+                      <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Calculating your CV fit…
+                      </div>
+                    )}
+                    {!cvLoading && cvExists && !fitLoading && fitScore !== null && (
+                      <CVFitBar score={fitScore} />
                     )}
                     <div className="flex flex-wrap items-center gap-2">
                       {contract.URL && (
