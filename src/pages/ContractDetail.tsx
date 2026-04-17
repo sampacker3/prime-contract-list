@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles, Info, Upload, Loader2 } from "lucide-react";
-import { useCVExists } from "@/hooks/useCVExists";
-import { useCVContractFit } from "@/hooks/useCVContractFit";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
@@ -40,53 +38,11 @@ function formatPostedDate(createdAt: string): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function CVFitBar({ score }: { score: number }) {
-  const isLow = score < 40;
-  const isMid = score >= 40 && score < 70;
-
-  const barColor = isLow
-    ? "from-orange-500 to-orange-400"
-    : isMid
-    ? "from-orange-400 to-amber-400"
-    : "from-amber-400 to-green-500";
-
-  const dotColor = isLow ? "bg-orange-500" : isMid ? "bg-amber-400" : "bg-green-500";
-
-  const message = isLow
-    ? "You may be missing some key skills for this contract"
-    : isMid
-    ? "You have some key skills for this role"
-    : "You are a great match for this role based on your skills";
-
-  const label = isLow ? "Low match" : isMid ? "Partial match" : "Strong match";
-  const labelColor = isLow ? "text-orange-500" : isMid ? "text-amber-500" : "text-green-600";
-
-  return (
-    <div className="mb-3">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-medium text-muted-foreground">CV fit for this role</span>
-        <span className={`text-xs font-semibold ${labelColor}`}>{label} · {score}%</span>
-      </div>
-      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-700`}
-          style={{ width: `${score}%` }}
-        />
-      </div>
-      <div className="flex items-center gap-1.5 mt-1.5">
-        <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${dotColor}`} />
-        <p className="text-xs text-muted-foreground">{message}</p>
-      </div>
-    </div>
-  );
-}
-
 function ApplyWithAI({ size = "default" }: { size?: "sm" | "default" }) {
   const [hover, setHover] = useState(false);
   const pad = size === "sm" ? "px-3 py-1.5 text-xs gap-1.5 h-8" : "px-4 py-2 text-sm gap-2 h-9";
   return (
     <>
-      {/* Rotating gradient border wrapper */}
       <div
         className="relative shrink-0 rounded-xl p-[1.5px]"
         style={{
@@ -123,16 +79,13 @@ export default function ContractDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isPro } = useAuth();
-  const { cvExists, cvLoading } = useCVExists();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { data: contract, isLoading, isError } = useContract(Number(id));
-  const { score: fitScore, isLoading: fitLoading } = useCVContractFit(contract?.id);
   const isToday = contract?.created_at
     ? new Date(contract.created_at) >= new Date(new Date().setHours(0, 0, 0, 0))
     : false;
 
-  // CTA shown inside the locked overlay
   const LockedCTA = () => (
     <div className="text-center mt-4">
       <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
@@ -162,7 +115,6 @@ export default function ContractDetail() {
       <Navbar />
 
       <main className="flex-1 container py-4 md:py-8 max-w-3xl">
-        {/* Back */}
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3 md:mb-6 transition-colors"
@@ -248,47 +200,24 @@ export default function ContractDetail() {
                   )}
                 </div>
 
-                {/* CV fit bar + action buttons */}
+                {/* Action buttons */}
                 {isPro && (
-                  <div>
-                    {/* CV fit: show bar if CV uploaded, prompt if not */}
-                    {!cvLoading && !cvExists && (
-                      <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2 mb-3">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Upload className="h-3.5 w-3.5 shrink-0 text-primary" />
-                          <span>Upload your CV for automated contract fit analysis</span>
-                        </div>
-                        <Link to="/account" className="text-xs font-medium text-primary hover:underline shrink-0">
-                          Upload CV →
-                        </Link>
-                      </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {contract.URL && (
+                      <Button variant="hero" size="sm" asChild>
+                        <a href={contract.URL} target="_blank" rel="noopener noreferrer">
+                          Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                        </a>
+                      </Button>
                     )}
-                    {!cvLoading && cvExists && (fitLoading || fitScore === null) && (
-                      <div className="flex items-center gap-2 mb-3 text-xs text-muted-foreground">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Calculating your CV fit…
-                      </div>
-                    )}
-                    {!cvLoading && cvExists && !fitLoading && fitScore !== null && (
-                      <CVFitBar score={fitScore} />
-                    )}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {contract.URL && (
-                        <Button variant="hero" size="sm" asChild>
-                          <a href={contract.URL} target="_blank" rel="noopener noreferrer">
-                            Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                          </a>
-                        </Button>
-                      )}
-                      <ApplyWithAI size="sm" />
-                      <Link
-                        to="/about-apply-with-ai"
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Info className="h-3 w-3" />
-                        What is Apply with AI?
-                      </Link>
-                    </div>
+                    <ApplyWithAI size="sm" />
+                    <Link
+                      to="/about-apply-with-ai"
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Info className="h-3 w-3" />
+                      What is Apply with AI?
+                    </Link>
                   </div>
                 )}
               </div>
@@ -323,7 +252,6 @@ export default function ContractDetail() {
                 </div>
               )}
             </div>
-
 
             {/* Footer CTA for free logged-in users */}
             {!isPro && user && (
