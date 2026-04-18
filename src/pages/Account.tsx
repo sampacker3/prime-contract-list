@@ -26,7 +26,7 @@ type Profile = {
 }
 
 const AccountPage = () => {
-  const { user, signOut, updatePassword } = useAuth();
+  const { user, loading, signOut, updatePassword } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { priceString } = useProPrice();
