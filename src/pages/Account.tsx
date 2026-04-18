@@ -56,6 +56,11 @@ const AccountPage = () => {
   const [cvDeleting, setCvDeleting] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
 
+  // Redirect unauthenticated users to home
+  useEffect(() => {
+    if (!loading && !user) navigate("/");
+  }, [user, loading]);
+
   // Read ?checkout= param — poll profile until webhook activates subscription
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
