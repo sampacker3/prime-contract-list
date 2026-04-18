@@ -7,6 +7,7 @@ type AuthContextType = {
   user: User | null
   loading: boolean
   isPro: boolean
+  proLoading: boolean
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
@@ -21,16 +22,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isPro, setIsPro] = useState(false)
+  const [proLoading, setProLoading] = useState(true)
 
   // Fetch subscription status whenever user changes
   useEffect(() => {
-    if (!user) { setIsPro(false); return; }
+    if (!user) { setIsPro(false); setProLoading(false); return; }
+    setProLoading(true)
     supabase
       .from('profiles')
       .select('subscription_active')
       .eq('id', user.id)
       .single()
-      .then(({ data }) => setIsPro(!!data?.subscription_active))
+      .then(({ data }) => {
+        setIsPro(!!data?.subscription_active)
+        setProLoading(false)
+      })
   }, [user])
 
   useEffect(() => {
@@ -75,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, isPro, signUp, signIn, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ session, user, loading, isPro, proLoading, signUp, signIn, signOut, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   )

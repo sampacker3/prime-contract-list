@@ -104,7 +104,7 @@ const ContractsPage = () => {
   const [ir35Filter, setIr35Filter] = useState<"all" | "outside" | "inside">("all");
   const [page, setPage] = useState(0);
 
-  const { user, isPro } = useAuth();
+  const { user, isPro, proLoading } = useAuth();
   const { cvExists } = useCVExists();
   const [searchFocused, setSearchFocused] = useState(false);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
@@ -229,8 +229,8 @@ const ContractsPage = () => {
         </div>
       </section>
 
-      {/* Upgrade banner for free logged-in users */}
-      {user && !isPro && (
+      {/* Upgrade banner — only render once plan status is confirmed */}
+      {user && !proLoading && !isPro && (
         <div className="bg-primary/5 border-b border-primary/20">
           <div className="container py-3 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
