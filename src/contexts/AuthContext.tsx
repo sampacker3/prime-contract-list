@@ -33,11 +33,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .from('profiles')
       .select('subscription_active')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         setIsPro(!!data?.subscription_active)
         setProLoading(false)
       })
+      .catch(() => setProLoading(false))
   }, [user])
 
   useEffect(() => {

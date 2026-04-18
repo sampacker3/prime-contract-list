@@ -40,15 +40,28 @@ const AccountPage = () => {
   const { data: profile } = useQuery<Profile | null>({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
+      // maybeSingle returns null instead of throwing when no row exists
       const { data } = await supabase
         .from('profiles')
         .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id')
         .eq('id', user!.id)
-        .single();
-      return (data as Profile) ?? null;
+        .maybeSingle();
+
+      // Google OAuth users may not have a profile row — create one
+      if (!data) {
+        await supabase.from('profiles').upsert({
+          id: user!.id,
+          email: user!.email ?? null,
+          subscription_plan: 'free',
+          subscription_active: false,
+        });
+        return null;
+      }
+
+      return data as Profile;
     },
     enabled: !!user,
-    staleTime: 30 * 1000, // show cached data instantly, background-refresh after 30s
+    staleTime: 30 * 1000,
   });
 
   const [cvName, setCvName] = useState<string | null>(null);
