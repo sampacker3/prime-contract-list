@@ -23,6 +23,7 @@ type Profile = {
   subscription_active: boolean
   subscription_renews_at: string | null
   stripe_customer_id: string | null
+  full_name: string | null
 }
 
 const AccountPage = () => {
@@ -43,7 +44,7 @@ const AccountPage = () => {
       // maybeSingle returns null instead of throwing when no row exists
       const { data } = await supabase
         .from('profiles')
-        .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id')
+        .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id, full_name')
         .eq('id', user!.id)
         .maybeSingle();
 
@@ -65,6 +66,29 @@ const AccountPage = () => {
   });
 
   const [cvName, setCvName] = useState<string | null>(null);
+
+  // Name editing
+  const [nameEditing, setNameEditing] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  const handleSaveName = async () => {
+    if (!user) return;
+    setNameSaving(true);
+    setNameError(null);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ full_name: nameValue.trim() || null })
+      .eq('id', user.id);
+    if (error) {
+      setNameError("Failed to save. Please try again.");
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      setNameEditing(false);
+    }
+    setNameSaving(false);
+  };
   const [cvUploading, setCvUploading] = useState(false);
   const [cvDeleting, setCvDeleting] = useState(false);
   const [cvError, setCvError] = useState<string | null>(null);
@@ -120,23 +144,6 @@ const AccountPage = () => {
       return { error: json.error || json.message || `Request failed (${res.status})` };
     }
     return json;
-  };
-
-  // Generic edge function caller — doesn't require a url in the response
-  const callEdgeFunctionRaw = async (fn: string, body?: Record<string, unknown>): Promise<{ ok: boolean; data?: unknown; error?: string }> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session?.access_token}`,
-        apikey: SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = await res.json();
-    if (!res.ok) return { ok: false, error: data.error || data.message || `Request failed (${res.status})` };
-    return { ok: true, data };
   };
 
   const handleUpgrade = async () => {
@@ -213,10 +220,21 @@ const AccountPage = () => {
       setCvName(file.name);
       await queryClient.invalidateQueries({ queryKey: ["cv-exists", user.id] });
 
-      // Step 2: Call edge function — parses PDF, embeds chunks, stores in usercvs
-      // Spinner stays active throughout since this is awaited
-      const { ok, error: fnError } = await callEdgeFunctionRaw("process-cv");
-      if (!ok) throw new Error(fnError ?? "CV processing failed");
+      // Step 2: Generate a fresh signed URL so n8n always fetches the latest file, bypassing CDN cache
+      const { data: signedUrlData } = await supabase.storage
+        .from(CV_BUCKET)
+        .createSignedUrl(path, 300); // valid for 5 minutes
+
+      // Step 3: Notify n8n webhook with the signed URL to process the uploaded CV
+      await fetch("https://sampacker.app.n8n.cloud/webhook/d81d708e-cd40-44e8-b80f-a12ac8dd0d97", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: user.id,
+          file_name: file.name,
+          signed_url: signedUrlData?.signedUrl,
+        }),
+      });
     } catch (err: unknown) {
       setCvError(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -317,6 +335,77 @@ const AccountPage = () => {
       )}
 
       <section className="container py-8 flex-1 max-w-3xl space-y-6">
+        {/* Profile */}
+        <div className="rounded-xl border bg-card p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary">
+              <User className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-heading font-semibold text-foreground">Profile</h2>
+              <p className="text-sm text-muted-foreground">Your account details</p>
+            </div>
+          </div>
+
+          <div className="rounded-lg border divide-y mb-4">
+            {/* Name row */}
+            <div className="px-4 py-3">
+              {nameEditing ? (
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs text-muted-foreground">Name</Label>
+                  <Input
+                    value={nameValue}
+                    onChange={e => setNameValue(e.target.value)}
+                    placeholder="Your full name"
+                    className="h-8 text-sm"
+                    autoFocus
+                  />
+                  {nameError && <p className="text-xs text-destructive">{nameError}</p>}
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="hero" onClick={handleSaveName} disabled={nameSaving}>
+                      {nameSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setNameEditing(false)} disabled={nameSaving}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Name</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {profile?.full_name ?? <span className="text-muted-foreground italic">Not set</span>}
+                    </p>
+                  </div>
+                  <button
+                    className="text-xs text-primary hover:underline shrink-0 ml-4"
+                    onClick={() => { setNameValue(profile?.full_name ?? ""); setNameEditing(true); setNameError(null); }}
+                  >
+                    {profile?.full_name ? "Edit" : "Add name"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Email row */}
+            <div className="px-4 py-3">
+              <p className="text-xs text-muted-foreground mb-0.5">Email</p>
+              <p className="text-sm font-medium text-foreground">{user?.email ?? "—"}</p>
+            </div>
+
+            {/* Member since row */}
+            <div className="px-4 py-3">
+              <p className="text-xs text-muted-foreground mb-0.5">Member since</p>
+              <p className="text-sm font-medium text-foreground">{memberSince}</p>
+            </div>
+          </div>
+
+          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleSignOut}>
+            <LogOut className="h-4 w-4 mr-1" /> Sign Out
+          </Button>
+        </div>
+
         {/* CV Upload */}
         <div className="rounded-xl border bg-card p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -488,37 +577,6 @@ const AccountPage = () => {
               <p className="text-xs text-muted-foreground mt-3">Secure checkout via Stripe. Cancel anytime.</p>
             </>
           )}
-        </div>
-
-        {/* Profile */}
-        <div className="rounded-xl border bg-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary">
-              <User className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-heading font-semibold text-foreground">Profile</h2>
-              <p className="text-sm text-muted-foreground">Your account details</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-sm text-muted-foreground">Email</span>
-              <span className="text-sm font-medium text-foreground">{user?.email ?? "—"}</span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-sm text-muted-foreground">Member since</span>
-              <span className="text-sm font-medium text-foreground">{memberSince}</span>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-1" /> Edit Profile
-            </Button>
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-1" /> Sign Out
-            </Button>
-          </div>
         </div>
 
         {/* Change Password */}
