@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock, Sparkles } from "lucide-react";
+import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock, Sparkles, X } from "lucide-react";
 import { useCVExists } from "@/hooks/useCVExists";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +16,9 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 
 const PAGE_SIZE = 25;
 
-function useContracts(search: string, location: string, page: number, ir35: "all" | "outside" | "inside") {
+function useContracts(search: string, location: string, page: number, ir35: "all" | "outside" | "inside", cvSkills?: string[]) {
   return useQuery({
-    queryKey: ["contracts", search, location, page, ir35],
+    queryKey: ["contracts", search, location, page, ir35, cvSkills],
     queryFn: async () => {
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -29,7 +29,14 @@ function useContracts(search: string, location: string, page: number, ir35: "all
         .order("created_at", { ascending: false })
         .range(from, to);
 
-      if (search) {
+      if (cvSkills && cvSkills.length > 0) {
+        // Build OR filter across all CV skills for title + description
+        const filters = cvSkills.slice(0, 10).flatMap(s => [
+          `JobTitle.ilike.%${s}%`,
+          `Description.ilike.%${s}%`,
+        ]).join(",");
+        query = query.or(filters);
+      } else if (search) {
         query = query.or(
           `JobTitle.ilike.%${search}%,Description.ilike.%${search}%,Company.ilike.%${search}%`
         );
@@ -65,6 +72,11 @@ function scoreRelevance(contract: Contract, term: string): number {
   if (company.includes(t)) return 1.5;
   if (desc.includes(t)) return 1;
   return 0;
+}
+
+function scoreCVRelevance(contract: Contract, skills: string[]): number {
+  const haystack = `${contract.JobTitle ?? ""} ${contract.Description ?? ""}`.toLowerCase();
+  return skills.filter(s => haystack.includes(s.toLowerCase())).length;
 }
 
 // PostedDate is a date-only field (no time). Use created_at for the full timestamp.
@@ -107,17 +119,48 @@ const ContractsPage = () => {
   const { user, isPro, proLoading } = useAuth();
   const { cvExists } = useCVExists();
   const [searchFocused, setSearchFocused] = useState(false);
+  const [cvSearchMode, setCvSearchMode] = useState(false);
+  const [cvSkills, setCvSkills] = useState<string[]>([]);
+  const [cvSkillsLoading, setCvSkillsLoading] = useState(false);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
-  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page, ir35Filter);
+  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page, ir35Filter, cvSearchMode ? cvSkills : undefined);
   const raw = result?.data ?? [];
   const totalCount = result?.total ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  const contracts = sortBy === "relevance" && searchTerm
-    ? [...raw].sort((a, b) => scoreRelevance(b, searchTerm) - scoreRelevance(a, searchTerm))
-    : raw;
+  const contracts = cvSearchMode && cvSkills.length > 0
+    ? [...raw].sort((a, b) => scoreCVRelevance(b, cvSkills) - scoreCVRelevance(a, cvSkills))
+    : sortBy === "relevance" && searchTerm
+      ? [...raw].sort((a, b) => scoreRelevance(b, searchTerm) - scoreRelevance(a, searchTerm))
+      : raw;
+
+  const activateCVSearch = async () => {
+    if (!user) return;
+    setSearchFocused(false);
+    setCvSkillsLoading(true);
+    const { data } = await supabase
+      .from("UserCVScrapeDetails")
+      .select("KeySkills")
+      .eq("UID", user.id)
+      .maybeSingle();
+    const skills = (data?.KeySkills as string[]) ?? [];
+    setCvSkills(skills);
+    setCvSearchMode(true);
+    setSearchTerm("");
+    setSearchInput("");
+    setPage(0);
+    setCvSkillsLoading(false);
+  };
+
+  const clearCVSearch = () => {
+    setCvSearchMode(false);
+    setCvSkills([]);
+    setSearchTerm("");
+    setSearchInput("");
+    setPage(0);
+  };
 
   const handleBookmark = (e: React.MouseEvent, jobId: number) => {
     e.stopPropagation();
@@ -151,39 +194,62 @@ const ContractsPage = () => {
           <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground mb-4 md:mb-6">Browse Contracts</h1>
           <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-2 md:gap-3">
             <div className="relative flex-1" ref={searchWrapperRef}>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
-              <Input
-                placeholder="Search by title, skill or technology..."
-                className="pl-10"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-              />
-              {/* AI CV suggestion — only shown when user is logged in and has a CV */}
-              {searchFocused && user && cvExists && (
-                <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+              {cvSearchMode ? (
+                /* CV search mode — show pill instead of text input */
+                <div className="flex items-center h-10 rounded-md border border-input bg-background px-3 gap-2">
+                  <div
+                    className="h-5 w-5 rounded flex items-center justify-center shrink-0"
+                    style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)" }}
+                  >
+                    {cvSkillsLoading
+                      ? <Loader2 className="h-3 w-3 text-white animate-spin" />
+                      : <Sparkles className="h-3 w-3 text-white" />
+                    }
+                  </div>
+                  <span className="text-sm font-medium text-foreground flex-1">Searching with CV</span>
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-left"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      setSearchFocused(false);
-                      alert("CV-based search coming soon!");
-                    }}
+                    onClick={clearCVSearch}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Clear CV search"
                   >
-                    <div
-                      className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)" }}
-                    >
-                      <Sparkles className="h-3.5 w-3.5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Search for contracts based on my CV</p>
-                      <p className="text-xs text-muted-foreground">AI will match roles to your skills and experience</p>
-                    </div>
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
+              ) : (
+                <>
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                  <Input
+                    placeholder="Search by title, skill or technology..."
+                    className="pl-10"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                  />
+                  {/* AI CV suggestion — only shown when user is logged in and has a CV */}
+                  {searchFocused && user && cvExists && (
+                    <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-left"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={activateCVSearch}
+                      >
+                        <div
+                          className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+                          style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)" }}
+                        >
+                          <Sparkles className="h-3.5 w-3.5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Search for contracts based on my CV</p>
+                          <p className="text-xs text-muted-foreground">Matches roles to your skills and experience</p>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             <div className="relative md:w-64">
@@ -258,7 +324,12 @@ const ContractsPage = () => {
                   <> of <span className="font-semibold text-foreground">{totalCount.toLocaleString("en-GB")}</span></>
                 )}
                 {" "}contract{totalCount !== 1 ? "s" : ""}
-                {(searchTerm || locationFilter) && (
+                {cvSearchMode && (
+                  <span className="ml-1 text-primary font-medium flex items-center gap-1 inline-flex">
+                    <Sparkles className="h-3 w-3" /> matched to your CV
+                  </span>
+                )}
+                {!cvSearchMode && (searchTerm || locationFilter) && (
                   <span className="ml-1 text-primary font-medium">matching your search</span>
                 )}
               </>
