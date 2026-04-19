@@ -81,11 +81,12 @@ const AccountPage = () => {
   const { data: keySkills } = useQuery<string[]>({
     queryKey: ['cv-skills', user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('UserCVScrapeDetails')
         .select('KeySkills')
         .eq('UID', user!.id)
         .maybeSingle();
+      console.log('[CV Skills] data:', data, 'error:', error);
       return (data?.KeySkills as string[]) ?? [];
     },
     enabled: !!user && isPro && !proLoading,
@@ -96,11 +97,12 @@ const AccountPage = () => {
   const { data: recentContracts } = useQuery({
     queryKey: ['contracts-for-matching'],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('LinkedinScrapeResults')
         .select('id, JobTitle, Company, Location, Description, PayRate, IR35Status, WorkType')
         .order('created_at', { ascending: false })
         .limit(300);
+      console.log('[Contracts] count:', data?.length, 'error:', error);
       return data ?? [];
     },
     enabled: !!keySkills && keySkills.length > 0,
@@ -109,6 +111,7 @@ const AccountPage = () => {
 
   // Score and rank contracts by skill match count
   const topMatchedContracts = useMemo<ScoredContract[]>(() => {
+    console.log('[Matching] isPro:', isPro, 'skills:', keySkills, 'contracts:', recentContracts?.length);
     if (!keySkills?.length || !recentContracts?.length) return [];
     const lowerSkills = keySkills.map(s => s.toLowerCase());
 
