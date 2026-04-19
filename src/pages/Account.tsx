@@ -78,15 +78,14 @@ const AccountPage = () => {
   });
 
   // Fetch user's key skills from CV scrape (Pro only)
-  const { data: keySkills } = useQuery<string[]>({
+  const { data: keySkills, isLoading: keySkillsLoading } = useQuery<string[]>({
     queryKey: ['cv-skills', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('UserCVScrapeDetails')
         .select('KeySkills')
         .eq('UID', user!.id)
         .maybeSingle();
-      console.log('[CV Skills] data:', data, 'error:', error);
       return (data?.KeySkills as string[]) ?? [];
     },
     enabled: !!user && isPro && !proLoading,
@@ -94,15 +93,14 @@ const AccountPage = () => {
   });
 
   // Fetch recent contracts for skill matching (Pro only, only when we have skills)
-  const { data: recentContracts } = useQuery({
+  const { data: recentContracts, isLoading: contractsLoading } = useQuery({
     queryKey: ['contracts-for-matching'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('LinkedinScrapeResults')
         .select('id, JobTitle, Company, Location, Description, PayRate, IR35Status, WorkType')
         .order('created_at', { ascending: false })
         .limit(300);
-      console.log('[Contracts] count:', data?.length, 'error:', error);
       return data ?? [];
     },
     enabled: !!keySkills && keySkills.length > 0,
@@ -111,7 +109,6 @@ const AccountPage = () => {
 
   // Score and rank contracts by skill match count
   const topMatchedContracts = useMemo<ScoredContract[]>(() => {
-    console.log('[Matching] isPro:', isPro, 'skills:', keySkills, 'contracts:', recentContracts?.length);
     if (!keySkills?.length || !recentContracts?.length) return [];
     const lowerSkills = keySkills.map(s => s.toLowerCase());
 
@@ -129,6 +126,7 @@ const AccountPage = () => {
   }, [keySkills, recentContracts]);
 
   const [cvName, setCvName] = useState<string | null>(null);
+  const [cvChecking, setCvChecking] = useState(true);
 
   // Name editing
   const [nameEditing, setNameEditing] = useState(false);
@@ -250,10 +248,10 @@ const AccountPage = () => {
       .then(({ data }) => {
         const existing = data?.find((f) => f.name === "cv.pdf");
         if (existing) {
-          // localStorage holds the original filename; storage confirms the file exists
           const saved = localStorage.getItem(`cv_filename_${user.id}`);
           setCvName(saved ?? "cv.pdf");
         }
+        setCvChecking(false);
       });
   }, [user]);
 
@@ -398,8 +396,33 @@ const AccountPage = () => {
       )}
 
       <section className="container py-8 flex-1 max-w-3xl space-y-6">
-        {/* Top Matched Contracts — Pro only, only when there are matches */}
-        {isPro && !proLoading && topMatchedContracts.length > 0 && (
+        {/* Top Matched Contracts — skeleton while loading, real content or nothing when done */}
+        {isPro && !proLoading && (keySkillsLoading || contractsLoading) && (
+          <div className="rounded-xl border bg-card p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-10 w-10 rounded-lg bg-muted animate-pulse shrink-0" />
+              <div className="space-y-2 flex-1">
+                <div className="h-4 w-36 rounded bg-muted animate-pulse" />
+                <div className="h-3 w-52 rounded bg-muted animate-pulse" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="rounded-lg border p-4">
+                  <div className="h-4 w-2/3 rounded bg-muted animate-pulse mb-2" />
+                  <div className="h-3 w-1/2 rounded bg-muted animate-pulse mb-3" />
+                  <div className="flex gap-1.5">
+                    <div className="h-5 w-14 rounded bg-muted animate-pulse" />
+                    <div className="h-5 w-16 rounded bg-muted animate-pulse" />
+                    <div className="h-5 w-12 rounded bg-muted animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {isPro && !proLoading && !keySkillsLoading && !contractsLoading && topMatchedContracts.length > 0 && (
           <div className="rounded-xl border bg-card p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary">
@@ -480,6 +503,17 @@ const AccountPage = () => {
             </div>
           </div>
 
+          {!profile ? (
+            /* Skeleton rows while profile loads */
+            <div className="rounded-lg border divide-y mb-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="px-4 py-3">
+                  <div className="h-3 w-16 rounded bg-muted animate-pulse mb-1.5" />
+                  <div className="h-4 w-40 rounded bg-muted animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="rounded-lg border divide-y mb-4">
             {/* Name row */}
             <div className="px-4 py-3">
@@ -533,6 +567,7 @@ const AccountPage = () => {
               <p className="text-sm font-medium text-foreground">{memberSince}</p>
             </div>
           </div>
+          )}
 
           <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleSignOut}>
             <LogOut className="h-4 w-4 mr-1" /> Sign Out
@@ -551,7 +586,12 @@ const AccountPage = () => {
             </div>
           </div>
 
-          {cvName ? (
+          {cvChecking ? (
+            <div className="rounded-lg border p-4 mb-4 flex items-center gap-3">
+              <div className="h-5 w-5 rounded bg-muted animate-pulse shrink-0" />
+              <div className="h-4 w-40 rounded bg-muted animate-pulse" />
+            </div>
+          ) : cvName ? (
             <div className="rounded-lg bg-accent/50 border p-4 flex items-center justify-between gap-4 mb-4">
               <div className="flex items-center gap-3 min-w-0">
                 <FileText className="h-5 w-5 text-primary shrink-0" />
