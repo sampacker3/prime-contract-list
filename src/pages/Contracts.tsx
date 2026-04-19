@@ -177,6 +177,7 @@ const ContractsPage = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    (document.activeElement as HTMLElement)?.blur();
     setSearchTerm(searchInput);
     setLocationFilter(locationInput);
     setPage(0);

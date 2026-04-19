@@ -345,6 +345,7 @@ const Index = () => {
   };
 
   const handleHeroSearch = (term?: string) => {
+    (document.activeElement as HTMLElement)?.blur();
     const q = (term ?? heroSearch).trim();
     if (user) navigate(q ? `/contracts?q=${encodeURIComponent(q)}` : "/contracts");
     else navigate(q ? `/search-preview?q=${encodeURIComponent(q)}` : "/search-preview");
