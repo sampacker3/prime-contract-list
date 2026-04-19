@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock, Sparkles, X } from "lucide-react";
 import { useCVExists } from "@/hooks/useCVExists";
@@ -161,6 +161,13 @@ const ContractsPage = () => {
     setSearchInput("");
     setPage(0);
   };
+
+  // Auto-activate CV search if navigated here with ?cv=1
+  useEffect(() => {
+    if (searchParams.get("cv") === "1" && user && !cvSearchMode) {
+      activateCVSearch();
+    }
+  }, [user]);
 
   const handleBookmark = (e: React.MouseEvent, jobId: number) => {
     e.stopPropagation();

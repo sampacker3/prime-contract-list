@@ -433,7 +433,7 @@ const Index = () => {
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => {
                           setHeroSearchFocused(false);
-                          alert("CV-based search coming soon!");
+                          navigate("/contracts?cv=1");
                         }}
                       >
                         <div

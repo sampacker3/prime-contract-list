@@ -415,7 +415,7 @@ const AccountPage = () => {
               {topMatchedContracts.map(contract => (
                 <a
                   key={contract.id}
-                  href={`/contracts/${contract.id}`}
+                  href={`/contract/${contract.id}`}
                   className="block rounded-lg border bg-background hover:bg-accent/40 transition-colors p-4 group"
                 >
                   <div className="flex items-start justify-between gap-3">
