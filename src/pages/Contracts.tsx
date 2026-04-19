@@ -228,12 +228,22 @@ const ContractsPage = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                   <Input
                     placeholder="Search by title, skill or technology..."
-                    className="pl-10"
+                    className="pl-10 pr-8"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     onFocus={() => setSearchFocused(true)}
                     onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
                   />
+                  {searchInput && (
+                    <button
+                      type="button"
+                      onClick={() => { setSearchInput(""); setSearchTerm(""); setPage(0); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors z-10"
+                      aria-label="Clear search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                   {/* AI CV suggestion — only shown when user is logged in and has a CV */}
                   {searchFocused && user && cvExists && (
                     <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-border bg-card shadow-lg overflow-hidden">

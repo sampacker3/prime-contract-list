@@ -9,7 +9,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import {
   Search, ArrowRight, Bell, FileText, Send,
   Zap, Shield, TrendingUp, Clock, Users, Timer,
-  Star, CheckCircle, ChevronDown, ChevronUp, Lock, CreditCard, Sparkles,
+  Star, CheckCircle, ChevronDown, ChevronUp, Lock, CreditCard, Sparkles, X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -419,12 +419,22 @@ const Index = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                   <Input
                     placeholder="e.g. Python, AWS, DevOps..."
-                    className="pl-9"
+                    className="pl-9 pr-8"
                     value={heroSearch}
                     onChange={(e) => setHeroSearch(e.target.value)}
                     onFocus={() => setHeroSearchFocused(true)}
                     onBlur={() => setTimeout(() => setHeroSearchFocused(false), 150)}
                   />
+                  {heroSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setHeroSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors z-10"
+                      aria-label="Clear search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                   {heroSearchFocused && user && cvExists && (
                     <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
                       <button
