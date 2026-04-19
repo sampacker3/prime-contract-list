@@ -398,6 +398,76 @@ const AccountPage = () => {
       )}
 
       <section className="container py-8 flex-1 max-w-3xl space-y-6">
+        {/* Top Matched Contracts — Pro only, only when there are matches */}
+        {isPro && !proLoading && topMatchedContracts.length > 0 && (
+          <div className="rounded-xl border bg-card p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-heading font-semibold text-foreground">Matched For You</h2>
+                <p className="text-sm text-muted-foreground">Top contracts based on your CV skills</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {topMatchedContracts.map(contract => (
+                <a
+                  key={contract.id}
+                  href={`/contracts/${contract.id}`}
+                  className="block rounded-lg border bg-background hover:bg-accent/40 transition-colors p-4 group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground text-sm leading-snug truncate group-hover:text-primary transition-colors">
+                        {contract.JobTitle ?? "Untitled Role"}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+                        {contract.Company && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" /> {contract.Company}
+                          </span>
+                        )}
+                        {contract.Location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" /> {contract.Location}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {contract.matchedSkills.slice(0, 5).map(skill => (
+                          <span key={skill} className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            {skill}
+                          </span>
+                        ))}
+                        {contract.matchedSkills.length > 5 && (
+                          <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                            +{contract.matchedSkills.length - 5} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      {contract.PayRate && (
+                        <Badge variant="secondary" className="text-xs whitespace-nowrap">{contract.PayRate}</Badge>
+                      )}
+                      {contract.IR35Status && (
+                        <Badge variant="outline" className="text-xs whitespace-nowrap">{contract.IR35Status}</Badge>
+                      )}
+                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            <a href="/contracts" className="mt-4 flex items-center gap-1 text-xs text-primary hover:underline">
+              Browse all contracts <ArrowRight className="h-3 w-3" />
+            </a>
+          </div>
+        )}
+
         {/* Profile */}
         <div className="rounded-xl border bg-card p-6">
           <div className="flex items-center gap-3 mb-5">
@@ -543,76 +613,6 @@ const AccountPage = () => {
             )}
           </div>
         </div>
-
-        {/* Top Matched Contracts — Pro only, only when there are matches */}
-        {isPro && !proLoading && topMatchedContracts.length > 0 && (
-          <div className="rounded-xl border bg-card p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-heading font-semibold text-foreground">Matched For You</h2>
-                <p className="text-sm text-muted-foreground">Top contracts based on your CV skills</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {topMatchedContracts.map(contract => (
-                <a
-                  key={contract.id}
-                  href={`/contracts/${contract.id}`}
-                  className="block rounded-lg border bg-background hover:bg-accent/40 transition-colors p-4 group"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground text-sm leading-snug truncate group-hover:text-primary transition-colors">
-                        {contract.JobTitle ?? "Untitled Role"}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                        {contract.Company && (
-                          <span className="flex items-center gap-1">
-                            <Building2 className="h-3 w-3" /> {contract.Company}
-                          </span>
-                        )}
-                        {contract.Location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" /> {contract.Location}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {contract.matchedSkills.slice(0, 5).map(skill => (
-                          <span key={skill} className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            {skill}
-                          </span>
-                        ))}
-                        {contract.matchedSkills.length > 5 && (
-                          <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                            +{contract.matchedSkills.length - 5} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      {contract.PayRate && (
-                        <Badge variant="secondary" className="text-xs whitespace-nowrap">{contract.PayRate}</Badge>
-                      )}
-                      {contract.IR35Status && (
-                        <Badge variant="outline" className="text-xs whitespace-nowrap">{contract.IR35Status}</Badge>
-                      )}
-                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-
-            <a href="/contracts" className="mt-4 flex items-center gap-1 text-xs text-primary hover:underline">
-              Browse all contracts <ArrowRight className="h-3 w-3" />
-            </a>
-          </div>
-        )}
 
         {/* Subscription card */}
         <div className="rounded-xl border bg-card p-6">
