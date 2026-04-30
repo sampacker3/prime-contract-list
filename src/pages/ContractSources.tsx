@@ -10,7 +10,7 @@ export default function ContractSources() {
     queryKey: ["contract-sources"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("LinkedinScrapeList")
+        .from("LinkedInScrapeList")
         .select("SearchTerm")
         .order("SearchTerm", { ascending: true });
       if (error) throw error;
