@@ -1,4 +1,4 @@
-import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,97 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+
+function CoverLetterModal({ contractId, jobTitle, onClose }: { contractId: number; jobTitle: string | null; onClose: () => void }) {
+  const { user } = useAuth();
+  const [letter, setLetter] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useState(() => {
+    if (!user) return;
+    supabase
+      .from("UserAIApplyContracts")
+      .select("*")
+      .eq("UserID", user.id)
+      .eq("JobID", contractId)
+      .maybeSingle()
+      .then(({ data, error: err }) => {
+        if (err || !data) { setError(true); setLoading(false); return; }
+        // Find the text column — try common names
+        const text =
+          data.CoverLetter ??
+          data.cover_letter ??
+          data.Content ??
+          data.content ??
+          data.Letter ??
+          data.letter ??
+          null;
+        setLetter(text);
+        setLoading(false);
+      });
+  });
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="relative w-full max-w-2xl max-h-[80vh] flex flex-col rounded-2xl bg-card border shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+          <div className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <div>
+              <p className="font-heading font-semibold text-foreground text-sm">AI Cover Letter</p>
+              {jobTitle && <p className="text-xs text-muted-foreground truncate max-w-xs">{jobTitle}</p>}
+            </div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto px-6 py-5 flex-1">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          )}
+          {!loading && error && (
+            <p className="text-sm text-muted-foreground text-center py-12">
+              No cover letter found for this contract yet.
+            </p>
+          )}
+          {!loading && !error && letter && (
+            <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{letter}</p>
+          )}
+          {!loading && !error && !letter && (
+            <p className="text-sm text-muted-foreground text-center py-12">
+              Cover letter content is empty.
+            </p>
+          )}
+        </div>
+
+        {/* Footer */}
+        {!loading && letter && (
+          <div className="px-6 py-4 border-t shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigator.clipboard.writeText(letter)}
+            >
+              Copy to clipboard
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function isToday(createdAt: string): boolean {
   const date = new Date(createdAt);
@@ -32,6 +123,7 @@ function formatPostedDate(createdAt: string): string {
 export default function SavedJobsPage() {
   const { savedContracts, savedLoading, toggleSave, savedJobIds } = useSavedJobs();
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [coverLetterId, setCoverLetterId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   const toggleExpand = (id: number) => {
@@ -151,13 +243,22 @@ export default function SavedJobsPage() {
                         ) : (
                           <p className="text-sm text-muted-foreground italic mb-4">No description available.</p>
                         )}
-                        <Button
-                          variant="hero"
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/contract/${contract.id}`); }}
-                        >
-                          See More <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="hero"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/contract/${contract.id}`); }}
+                          >
+                            See More <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); setCoverLetterId(contract.id); }}
+                          >
+                            <FileText className="h-3.5 w-3.5 mr-1" /> See Cover Letter
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -169,6 +270,14 @@ export default function SavedJobsPage() {
       </section>
 
       <Footer />
+
+      {coverLetterId && (
+        <CoverLetterModal
+          contractId={coverLetterId}
+          jobTitle={savedContracts.find(c => c.id === coverLetterId)?.JobTitle ?? null}
+          onClose={() => setCoverLetterId(null)}
+        />
+      )}
     </div>
   );
 }
