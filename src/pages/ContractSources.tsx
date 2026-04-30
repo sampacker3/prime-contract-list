@@ -11,11 +11,13 @@ export default function ContractSources() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("LinkedInScrapeList")
-        .select("SearchTerm")
-        .order("SearchTerm", { ascending: true });
+        .select("*");
       if (error) throw error;
-      // Deduplicate and filter blanks
-      const unique = [...new Set((data ?? []).map((r: { SearchTerm: string }) => r.SearchTerm).filter(Boolean))];
+      console.log('[ContractSources] raw row sample:', data?.[0]);
+      // Find the SearchTerm column regardless of casing
+      const firstRow = data?.[0] ?? {};
+      const key = Object.keys(firstRow).find(k => k.toLowerCase() === 'searchterm') ?? 'SearchTerm';
+      const unique = [...new Set((data ?? []).map((r: Record<string, string>) => r[key]).filter(Boolean))];
       return unique.sort((a, b) => a.localeCompare(b));
     },
     staleTime: 60 * 60 * 1000,
