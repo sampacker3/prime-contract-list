@@ -50,12 +50,19 @@ function ApplyWithAI({ size = "default", userId, contractId }: { size?: "sm" | "
     setLoading(true);
     setError(false);
     try {
-      await fetch("https://sampacker.app.n8n.cloud/webhook/343e1523-21c4-4010-ba39-aae4d40645b0", {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ user_id: userId, contract_id: String(contractId) }),
-      });
+      await Promise.all([
+        // Fire webhook
+        fetch("https://sampacker.app.n8n.cloud/webhook/343e1523-21c4-4010-ba39-aae4d40645b0", {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ user_id: userId, contract_id: String(contractId) }),
+        }),
+        // Save contract — ignore if already saved
+        supabase
+          .from("UserSavedJobs")
+          .upsert({ UserID: userId, JobID: contractId }, { onConflict: "UserID,JobID", ignoreDuplicates: true }),
+      ]);
       setDone(true);
     } catch {
       setError(true);
