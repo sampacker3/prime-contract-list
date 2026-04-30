@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles, Info } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles, Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
@@ -38,9 +38,31 @@ function formatPostedDate(createdAt: string): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function ApplyWithAI({ size = "default" }: { size?: "sm" | "default" }) {
+function ApplyWithAI({ size = "default", userId, contractId }: { size?: "sm" | "default"; userId: string; contractId: number }) {
   const [hover, setHover] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState(false);
   const pad = size === "sm" ? "px-3 py-1.5 text-xs gap-1.5 h-8" : "px-4 py-2 text-sm gap-2 h-9";
+
+  const handleClick = async () => {
+    if (loading || done) return;
+    setLoading(true);
+    setError(false);
+    try {
+      await fetch("https://sampacker.app.n8n.cloud/webhook-test/343e1523-21c4-4010-ba39-aae4d40645b0", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, contract_id: contractId }),
+      });
+      setDone(true);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <div
@@ -64,13 +86,21 @@ function ApplyWithAI({ size = "default" }: { size?: "sm" | "default" }) {
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
             color: "#ffffff",
+            opacity: loading ? 0.7 : 1,
+            cursor: loading || done ? "default" : "pointer",
           }}
-          onClick={() => alert("AI application feature coming soon!")}
+          onClick={handleClick}
+          disabled={loading || done}
         >
-          <Sparkles className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} style={{ filter: "drop-shadow(0 0 4px rgba(139,92,246,0.6))" }} />
-          Apply with AI
+          {loading ? (
+            <Loader2 className={`animate-spin ${size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"}`} style={{ filter: "drop-shadow(0 0 4px rgba(139,92,246,0.6))" }} />
+          ) : (
+            <Sparkles className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} style={{ filter: "drop-shadow(0 0 4px rgba(139,92,246,0.6))" }} />
+          )}
+          {done ? "Application sent!" : loading ? "Working…" : "Apply with AI"}
         </button>
       </div>
+      {error && <p className="text-xs text-destructive mt-1">Something went wrong — please try again.</p>}
     </>
   );
 }
@@ -210,7 +240,7 @@ export default function ContractDetail() {
                         </a>
                       </Button>
                     )}
-                    <ApplyWithAI size="sm" />
+                    <ApplyWithAI size="sm" userId={user.id} contractId={contract.id} />
                     <Link
                       to="/about-apply-with-ai"
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
