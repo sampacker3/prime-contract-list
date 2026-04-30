@@ -1,6 +1,6 @@
 import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
@@ -125,6 +125,18 @@ export default function SavedJobsPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [coverLetterId, setCoverLetterId] = useState<number | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Auto-open cover letter modal if ?cover= param is present
+  useEffect(() => {
+    const coverId = searchParams.get("cover");
+    if (coverId) {
+      const id = Number(coverId);
+      setCoverLetterId(id);
+      setExpandedId(id);
+      window.history.replaceState({}, '', '/saved');
+    }
+  }, [searchParams]);
 
   const toggleExpand = (id: number) => {
     setExpandedId((prev) => (prev === id ? null : id));

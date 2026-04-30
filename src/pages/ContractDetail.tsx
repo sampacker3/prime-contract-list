@@ -43,6 +43,7 @@ function ApplyWithAI({ size = "default", userId, contractId }: { size?: "sm" | "
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(false);
+  const navigate = useNavigate();
   const pad = size === "sm" ? "px-3 py-1.5 text-xs gap-1.5 h-8" : "px-4 py-2 text-sm gap-2 h-9";
 
   const handleClick = async () => {
@@ -97,15 +98,15 @@ function ApplyWithAI({ size = "default", userId, contractId }: { size?: "sm" | "
             opacity: loading ? 0.7 : 1,
             cursor: loading || done ? "default" : "pointer",
           }}
-          onClick={handleClick}
-          disabled={loading || done}
+          onClick={done ? () => navigate(`/saved?cover=${contractId}`) : handleClick}
+          disabled={loading}
         >
           {loading ? (
             <Loader2 className={`animate-spin ${size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"}`} style={{ filter: "drop-shadow(0 0 4px rgba(139,92,246,0.6))" }} />
           ) : (
             <Sparkles className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} style={{ filter: "drop-shadow(0 0 4px rgba(139,92,246,0.6))" }} />
           )}
-          {done ? "Application sent!" : loading ? "Working…" : "Apply with AI"}
+          {done ? "Success — See Cover Letter" : loading ? "Working…" : "Apply with AI"}
         </button>
       </div>
       {error && <p className="text-xs text-destructive mt-1">Something went wrong — please try again.</p>}
