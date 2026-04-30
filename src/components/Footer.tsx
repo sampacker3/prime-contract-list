@@ -22,6 +22,7 @@ const Footer = () => (
             <Link to="/contracts" className="block hover:text-foreground transition-colors">Browse Contracts</Link>
             <Link to="/alerts" className="block hover:text-foreground transition-colors">Email Alerts</Link>
             <Link to="/account" className="block hover:text-foreground transition-colors">My Account</Link>
+            <Link to="/contract-sources" className="block hover:text-foreground transition-colors">What contracts we pull</Link>
           </div>
         </div>
         <div>

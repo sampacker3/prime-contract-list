@@ -29,6 +29,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import Upgrade from "./pages/Upgrade.tsx";
 import AboutApplyWithAI from "./pages/AboutApplyWithAI.tsx";
 import Terms from "./pages/Terms.tsx";
+import ContractSources from "./pages/ContractSources.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/upgrade" element={<Upgrade />} />
             <Route path="/about-apply-with-ai" element={<AboutApplyWithAI />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/contract-sources" element={<ContractSources />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
