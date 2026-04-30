@@ -52,8 +52,9 @@ function ApplyWithAI({ size = "default", userId, contractId }: { size?: "sm" | "
     try {
       await fetch("https://sampacker.app.n8n.cloud/webhook/343e1523-21c4-4010-ba39-aae4d40645b0", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, contract_id: contractId }),
+        mode: "no-cors",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ user_id: userId, contract_id: String(contractId) }),
       });
       setDone(true);
     } catch {
