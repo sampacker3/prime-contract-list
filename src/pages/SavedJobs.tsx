@@ -1,4 +1,4 @@
-import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X, Copy, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ function CoverLetterModal({ contractId, jobTitle, onClose }: { contractId: numbe
   const [letter, setLetter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useState(() => {
     if (!user) return;
@@ -88,9 +89,17 @@ function CoverLetterModal({ contractId, jobTitle, onClose }: { contractId: numbe
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigator.clipboard.writeText(letter)}
+              onClick={() => {
+                navigator.clipboard.writeText(letter);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className={copied ? "text-green-600 border-green-500 hover:text-green-600" : ""}
             >
-              Copy to clipboard
+              {copied
+                ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
+                : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy to clipboard</>
+              }
             </Button>
           </div>
         )}
