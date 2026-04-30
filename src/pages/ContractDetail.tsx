@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Sparkles, Info } from "lucide-react";
@@ -10,6 +10,93 @@ import AuthModal from "@/components/AuthModal";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Contract } from "@/types/database";
+
+function CVFitBar({ contract, userId }: { contract: Contract; userId: string }) {
+  const { data: keySkills, isLoading } = useQuery<string[]>({
+    queryKey: ['cv-skills', userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('UserCVScrapeDetails')
+        .select('KeySkills')
+        .eq('UID', userId)
+        .maybeSingle();
+      return (data?.KeySkills as string[]) ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { matchedSkills, score } = useMemo(() => {
+    if (!keySkills?.length) return { matchedSkills: [], score: 0 };
+    const haystack = `${contract.JobTitle ?? ''} ${contract.Description ?? ''}`.toLowerCase();
+    const matched = keySkills.filter(s => haystack.includes(s.toLowerCase()));
+    return {
+      matchedSkills: matched,
+      score: Math.round((matched.length / keySkills.length) * 100),
+    };
+  }, [keySkills, contract]);
+
+  // Don't render if no skills on file
+  if (!isLoading && (!keySkills || keySkills.length === 0)) return null;
+
+  const barColor =
+    score >= 70 ? "bg-green-500" :
+    score >= 40 ? "bg-amber-400" :
+    "bg-red-400";
+
+  const label =
+    score >= 70 ? "Strong match" :
+    score >= 40 ? "Partial match" :
+    "Low match";
+
+  const labelColor =
+    score >= 70 ? "text-green-600 dark:text-green-400" :
+    score >= 40 ? "text-amber-600 dark:text-amber-400" :
+    "text-red-500 dark:text-red-400";
+
+  return (
+    <div className="px-6 py-4 border-b bg-surface-subtle">
+      <div className="flex items-center gap-2 mb-2">
+        <div
+          className="h-5 w-5 rounded flex items-center justify-center shrink-0"
+          style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)" }}
+        >
+          <Sparkles className="h-3 w-3 text-white" />
+        </div>
+        <span className="text-sm font-semibold text-foreground">CV Match</span>
+        {!isLoading && (
+          <span className={`text-sm font-bold ml-auto ${labelColor}`}>
+            {score}% — {label}
+          </span>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="h-2 rounded-full bg-muted animate-pulse w-full" />
+      ) : (
+        <>
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+              style={{ width: `${score}%` }}
+            />
+          </div>
+          {matchedSkills.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {matchedSkills.map(skill => (
+                <span
+                  key={skill}
+                  className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 function useContract(id: number) {
   return useQuery({
@@ -222,6 +309,9 @@ export default function ContractDetail() {
                 )}
               </div>
             </div>
+
+            {/* CV Fit Bar — Pro users with CV data only */}
+            {isPro && user && <CVFitBar contract={contract} userId={user.id} />}
 
             {/* Body */}
             <div className="p-6">
