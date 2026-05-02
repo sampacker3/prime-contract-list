@@ -1,4 +1,5 @@
-import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X, Copy, Check, Sparkles } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X, Copy, Check } from "lucide-react";
+import ApplyWithAIButton from "@/components/ApplyWithAIButton";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -135,7 +136,6 @@ export default function SavedJobsPage() {
   const { savedContracts, savedLoading, toggleSave, savedJobIds } = useSavedJobs();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [coverLetterId, setCoverLetterId] = useState<number | null>(null);
-  const [applyingId, setApplyingId] = useState<number | null>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -166,8 +166,7 @@ export default function SavedJobsPage() {
   }, [searchParams]);
 
   const handleApplyWithAI = async (contractId: number) => {
-    if (!user || applyingId) return;
-    setApplyingId(contractId);
+    if (!user) return;
     try {
       await fetch("https://sampacker.app.n8n.cloud/webhook/343e1523-21c4-4010-ba39-aae4d40645b0", {
         method: "POST",
@@ -182,8 +181,6 @@ export default function SavedJobsPage() {
         return next;
       });
       setCoverLetterId(contractId);
-    } finally {
-      setApplyingId(null);
     }
   };
 
@@ -321,17 +318,14 @@ export default function SavedJobsPage() {
                               <FileText className="h-3.5 w-3.5 mr-1" /> See Cover Letter
                             </Button>
                           ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={applyingId === contract.id}
-                              onClick={(e) => { e.stopPropagation(); handleApplyWithAI(contract.id); }}
-                            >
-                              {applyingId === contract.id
-                                ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> Working…</>
-                                : <><Sparkles className="h-3.5 w-3.5 mr-1" /> Apply with AI</>
-                              }
-                            </Button>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <ApplyWithAIButton
+                                size="sm"
+                                onClick={() => handleApplyWithAI(contract.id)}
+                                doneLabel="Success — See Cover Letter"
+                                onDoneClick={() => setCoverLetterId(contract.id)}
+                              />
+                            </div>
                           )}
                         </div>
                       </div>
