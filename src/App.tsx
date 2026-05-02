@@ -32,6 +32,7 @@ import Terms from "./pages/Terms.tsx";
 import ContractSources from "./pages/ContractSources.tsx";
 import About from "./pages/About.tsx";
 import Contact from "./pages/Contact.tsx";
+import Privacy from "./pages/Privacy.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/contract-sources" element={<ContractSources />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
