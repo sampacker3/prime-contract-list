@@ -84,11 +84,11 @@ const steps = [
   { icon: Search, title: "We search hundreds of businesses and recruiters for contracts", description: "We scrape contracts from hundreds of job boards and company sites so you don't have to." },
   { icon: Bell, title: "We notify you as soon as a relevant contract is posted", description: "No more hunting and missing opportunities because you are too late." },
   { icon: FileText, title: "We draft a cover letter based on your CV and the selected contract", description: "Create tailored applications every time, saving you time and improving your application." },
-  { icon: Send, title: "You apply to your ideal contract", description: "That hard work has been done, all you need to do is apply with your custom cover letter to your contract early thanks to ContractHub." },
+  { icon: Send, title: "You apply to your ideal contract", description: "That hard work has been done, all you need to do is apply with your custom cover letter to your contract early thanks to IT ContractHub." },
 ];
 
 const features = [
-  { icon: Zap, title: "Updated every 10 minutes", description: "Our scrapers hit 500+ sources around the clock. New contracts appear on ContractHub before they spread anywhere else.", highlight: "10× faster than job boards" },
+  { icon: Zap, title: "Updated every 10 minutes", description: "Our scrapers hit 500+ sources around the clock. New contracts appear on IT ContractHub before they spread anywhere else.", highlight: "10× faster than job boards" },
   { icon: Bell, title: "Instant email alerts", description: "Set keyword alerts and get notified the moment a matching contract is posted. Be the first CV in the inbox — every time.", highlight: "Never miss a role" },
   { icon: Search, title: "Full contract details", description: "See the company name, location, employment type, and complete job description. No more guessing what the role actually is.", highlight: "Everything, upfront" },
   { icon: FileText, title: "One-click apply", description: "Direct links to the original posting so you can apply immediately — no extra steps, no lost time navigating between sites.", highlight: "Apply in seconds" },
@@ -97,14 +97,14 @@ const features = [
 ];
 
 const testimonials = [
-  { quote: "I landed a £650/day Python contract within 3 days of signing up. ContractHub had the listing 4 hours before I saw it anywhere else.", name: "James R.", role: "Data Engineer · London", stars: 5 },
+  { quote: "I landed a £650/day Python contract within 3 days of signing up. IT ContractHub had the listing 4 hours before I saw it anywhere else.", name: "James R.", role: "Data Engineer · London", stars: 5 },
   { quote: "The alerts are a game changer. I set up a 'DevOps' alert on Monday and had three interviews booked by Wednesday. Can't recommend it enough.", name: "Sarah M.", role: "DevOps Consultant · Manchester", stars: 5 },
   { quote: "Tried three other contract boards before this. None of them had listings this fresh. The 10-minute update cycle is the real deal.", name: "Tom K.", role: "Solutions Architect · Edinburgh", stars: 5 },
 ];
 
 const faqs = [
-  { q: "How is ContractHub different from free job boards?", a: "Most job boards update once or twice a day. ContractHub scrapes 500+ sources every 10 minutes, so you see roles hours before the competition — and you get full details without clicking through." },
-  { q: "Who is ContractHub Pro for?", a: "Any UK IT contractor who's tired of applying late and missing roles. Whether you're in Data, DevOps, Cloud, Development, or any other tech discipline — if you're contracting, you need to be first." },
+  { q: "How is IT ContractHub different from free job boards?", a: "Most job boards update once or twice a day. IT ContractHub scrapes 500+ sources every 10 minutes, so you see roles hours before the competition — and you get full details without clicking through." },
+  { q: "Who is IT ContractHub Pro for?", a: "Any UK IT contractor who's tired of applying late and missing roles. Whether you're in Data, DevOps, Cloud, Development, or any other tech discipline — if you're contracting, you need to be first." },
   { q: "Can I cancel at any time?", a: "Absolutely. Cancel your Pro subscription anytime from the billing portal in your account settings. No questions asked, no hidden fees." },
   { q: "How quickly will I get access after subscribing?", a: "Instantly. As soon as your payment is confirmed, your account is upgraded to Pro and all contract details are unlocked." },
   { q: "Is there a free plan?", a: "Yes — you can browse contract titles and dates for free. Upgrade to Pro to unlock full company details, descriptions, alerts, and one-click apply." },
@@ -354,10 +354,10 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO
-        title="ContractHub — Find IT Contract Roles Across the UK"
-        description="Find your next IT contract in the UK. ContractHub aggregates thousands of contract roles from hundreds of sources, updated in real-time. Search by role, location, and rate."
+        title="IT ContractHub — Find IT Contract Roles Across the UK"
+        description="Find your next IT contract in the UK. IT ContractHub aggregates thousands of contract roles from hundreds of sources, updated in real-time. Search by role, location, and rate."
         canonical="/"
-        jsonLd={{ "@context": "https://schema.org", "@type": "WebSite", "name": "ContractHub", "url": "https://contracthub.co.uk", "description": "Find IT contract roles across the UK, updated in real-time.", "potentialAction": { "@type": "SearchAction", "target": "https://contracthub.co.uk/contracts?q={search_term_string}", "query-input": "required name=search_term_string" } }}
+        jsonLd={{ "@context": "https://schema.org", "@type": "WebSite", "name": "IT ContractHub", "url": "https://contracthub.co.uk", "description": "Find IT contract roles across the UK, updated in real-time.", "potentialAction": { "@type": "SearchAction", "target": "https://contracthub.co.uk/contracts?q={search_term_string}", "query-input": "required name=search_term_string" } }}
       />
       <Navbar />
 
@@ -535,7 +535,7 @@ const Index = () => {
             {[
               { icon: Clock, label: "Typical job board delay", value: "12–24 hrs", color: "text-destructive", bg: "bg-destructive/10" },
               { icon: Users, label: "Avg. applications per role", value: "80+", color: "text-orange-500", bg: "bg-orange-500/10" },
-              { icon: Zap, label: "ContractHub update cycle", value: "10 mins", color: "text-primary", bg: "bg-primary/10" },
+              { icon: Zap, label: "IT ContractHub update cycle", value: "10 mins", color: "text-primary", bg: "bg-primary/10" },
             ].map(({ icon: Icon, label, value, color, bg }) => (
               <div key={label} className="rounded-xl border bg-card p-5">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg} ${color} mb-3`}><Icon className="h-5 w-5" /></div>
@@ -605,7 +605,7 @@ const Index = () => {
           <p className="text-primary-foreground/70 text-lg mb-10">Less than a coffee a day. One contract placement pays for a full year of Pro.</p>
 
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-8 max-w-sm mx-auto mb-8">
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-1">ContractHub Pro</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/60 mb-1">IT ContractHub Pro</p>
             <div className="flex items-end justify-center gap-1 mb-1">
               <span className="text-5xl font-heading font-bold text-white">{displayAmount}</span>
               <span className="text-white/50 mb-2">/{displayInterval}</span>
@@ -650,7 +650,7 @@ const Index = () => {
             <span className="text-primary">don't wait.</span>
             <br />Neither should you.
           </h2>
-          <p className="text-muted-foreground text-lg mb-10">Join thousands of UK contractors who find roles faster and apply earlier with ContractHub.</p>
+          <p className="text-muted-foreground text-lg mb-10">Join thousands of UK contractors who find roles faster and apply earlier with IT ContractHub.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="hero" size="lg" onClick={handleExplore}
               className="text-base px-10 h-14 rounded-xl shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-all hover:scale-105"

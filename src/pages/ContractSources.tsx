@@ -36,8 +36,8 @@ export default function ContractSources() {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO
-        title="What Contracts We Pull — ContractHub"
-        description="A full list of the contract search terms and categories ContractHub monitors across hundreds of UK job sources."
+        title="What Contracts We Pull — IT ContractHub"
+        description="A full list of the contract search terms and categories IT ContractHub monitors across hundreds of UK job sources."
         canonical="/contract-sources"
       />
       <Navbar />
@@ -53,7 +53,7 @@ export default function ContractSources() {
             </h1>
           </div>
           <p className="text-muted-foreground max-w-2xl">
-            ContractHub monitors hundreds of UK job sources for the search terms below — updated continuously so you never miss a relevant role.
+            IT ContractHub monitors hundreds of UK job sources for the search terms below — updated continuously so you never miss a relevant role.
           </p>
           {!isLoading && terms && (
             <p className="mt-2 text-sm text-muted-foreground">

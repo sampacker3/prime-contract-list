@@ -64,7 +64,7 @@ const features = [
   {
     icon: Zap,
     title: "Updated every 10 minutes",
-    description: "Our scrapers hit 500+ sources around the clock. New contracts appear on ContractHub before they spread anywhere else.",
+    description: "Our scrapers hit 500+ sources around the clock. New contracts appear on IT ContractHub before they spread anywhere else.",
     highlight: "10× faster than job boards",
   },
   {
@@ -101,7 +101,7 @@ const features = [
 
 const testimonials = [
   {
-    quote: "I landed a £650/day Python contract within 3 days of signing up. ContractHub had the listing 4 hours before I saw it anywhere else.",
+    quote: "I landed a £650/day Python contract within 3 days of signing up. IT ContractHub had the listing 4 hours before I saw it anywhere else.",
     name: "James R.",
     role: "Data Engineer · London",
     stars: 5,
@@ -122,8 +122,8 @@ const testimonials = [
 
 const faqs = [
   {
-    q: "How is ContractHub Pro different from free job boards?",
-    a: "Most job boards update once or twice a day and show you what everyone else is already seeing. ContractHub scrapes 500+ sources every 10 minutes, so you see roles hours before the competition — and you get the full details (company, location, description) without having to click through.",
+    q: "How is IT ContractHub Pro different from free job boards?",
+    a: "Most job boards update once or twice a day and show you what everyone else is already seeing. IT ContractHub scrapes 500+ sources every 10 minutes, so you see roles hours before the competition — and you get the full details (company, location, description) without having to click through.",
   },
   {
     q: "Can I cancel at any time?",
@@ -284,8 +284,8 @@ export default function UpgradePage() {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO
-        title="Upgrade to Pro — ContractHub"
-        description="Get full access to every UK IT contract the moment it's posted. Upgrade to ContractHub Pro."
+        title="Upgrade to Pro — IT ContractHub"
+        description="Get full access to every UK IT contract the moment it's posted. Upgrade to IT ContractHub Pro."
         canonical="/upgrade"
       />
       <Navbar />
@@ -313,7 +313,7 @@ export default function UpgradePage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
             </span>
-            ContractHub Pro
+            IT ContractHub Pro
           </div>
 
           <h1 className="text-5xl md:text-7xl font-heading font-bold leading-[1.05] tracking-tight mb-6">
@@ -326,7 +326,7 @@ export default function UpgradePage() {
           </h1>
 
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-10">
-            ContractHub Pro scans 500+ sources every 10 minutes. While other contractors are browsing stale job boards, you're already applying.
+            IT ContractHub Pro scans 500+ sources every 10 minutes. While other contractors are browsing stale job boards, you're already applying.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
@@ -381,7 +381,7 @@ export default function UpgradePage() {
             {[
               { icon: Clock, label: "Typical job board delay", value: "12–24 hrs", color: "text-destructive", bg: "bg-destructive/10" },
               { icon: Users, label: "Avg. applications per role", value: "80+", color: "text-orange-500", bg: "bg-orange-500/10" },
-              { icon: Zap, label: "ContractHub update cycle", value: "10 mins", color: "text-primary", bg: "bg-primary/10" },
+              { icon: Zap, label: "IT ContractHub update cycle", value: "10 mins", color: "text-primary", bg: "bg-primary/10" },
             ].map(({ icon: Icon, label, value, color, bg }) => (
               <div key={label} className="rounded-xl border bg-card p-5">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg} ${color} mb-3`}>
@@ -464,7 +464,7 @@ export default function UpgradePage() {
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">ContractHub</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">IT ContractHub</p>
                   <h3 className="text-2xl font-heading font-bold text-foreground">Pro Plan</h3>
                 </div>
                 <Badge className="bg-primary text-primary-foreground">Most Popular</Badge>
@@ -547,7 +547,7 @@ export default function UpgradePage() {
             <br />Neither should you.
           </h2>
           <p className="text-muted-foreground text-lg mb-10">
-            Join thousands of UK contractors who find roles faster and apply earlier with ContractHub Pro.
+            Join thousands of UK contractors who find roles faster and apply earlier with IT ContractHub Pro.
           </p>
           <Button
             size="lg"

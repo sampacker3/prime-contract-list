@@ -106,7 +106,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
               <p className="text-sm text-muted-foreground mt-1">
                 {tab === "signin"
                   ? "Sign in to browse contracts"
-                  : "Join ContractHub to access hundreds of contracts"}
+                  : "Join IT ContractHub to access hundreds of contracts"}
               </p>
             </div>
 

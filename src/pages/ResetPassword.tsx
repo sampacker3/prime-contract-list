@@ -55,7 +55,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-subtle">
-      <SEO title="Set New Password — ContractHub" description="Set a new password for your ContractHub account." canonical="/reset-password" noIndex />
+      <SEO title="Set New Password — IT ContractHub" description="Set a new password for your IT ContractHub account." canonical="/reset-password" noIndex />
       <Navbar />
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md rounded-2xl border bg-card shadow-xl p-8">

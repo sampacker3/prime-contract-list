@@ -31,7 +31,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-subtle">
-      <SEO title="Reset Password — ContractHub" description="Reset your ContractHub password." canonical="/forgot-password" noIndex />
+      <SEO title="Reset Password — IT ContractHub" description="Reset your IT ContractHub password." canonical="/forgot-password" noIndex />
       <Navbar />
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md rounded-2xl border bg-card shadow-xl p-8">

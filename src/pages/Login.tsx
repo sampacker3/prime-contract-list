@@ -34,7 +34,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <SEO title="Sign In — ContractHub" description="Sign in to your ContractHub account to access your alerts and saved contracts." canonical="/login" noIndex={true} />
+      <SEO title="Sign In — IT ContractHub" description="Sign in to your IT ContractHub account to access your alerts and saved contracts." canonical="/login" noIndex={true} />
       <Navbar />
       <div className="flex-1 flex items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md">

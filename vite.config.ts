@@ -17,15 +17,18 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     sitemap({
-      hostname: "https://contracthub.co.uk",
-      dynamicRoutes: ["/", "/contracts"],
-      exclude: ["/login", "/signup", "/account", "/alerts"],
+      hostname: "https://itcontracthub.co.uk",
+      dynamicRoutes: ["/", "/contracts", "/about", "/contact", "/contract-sources", "/upgrade"],
+      exclude: ["/login", "/signup", "/account", "/alerts", "/saved", "/reset-password", "/forgot-password"],
       changefreq: "daily",
       priority: {
         "/": 1.0,
         "/contracts": 0.9,
+        "/about": 0.7,
+        "/contact": 0.5,
       },
       lastmod: new Date().toISOString(),
+      generateRobotsTxt: false,
     }),
   ].filter(Boolean),
   resolve: {

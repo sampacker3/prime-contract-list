@@ -26,6 +26,8 @@ function CoverLetterModal({ contractId, jobTitle, onClose }: { contractId: numbe
       .select("*")
       .eq("UserID", user.id)
       .eq("JobID", contractId)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle()
       .then(({ data, error: err }) => {
         if (err || !data) { setError(true); setLoading(false); return; }
@@ -181,6 +183,8 @@ export default function SavedJobsPage() {
         return next;
       });
       setCoverLetterId(contractId);
+    } catch {
+      // webhook fire-and-forget — ignore errors
     }
   };
 
@@ -191,8 +195,8 @@ export default function SavedJobsPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO
-        title="Saved Contracts — ContractHub"
-        description="Your saved IT contract roles on ContractHub."
+        title="Saved Contracts — IT ContractHub"
+        description="Your saved IT contract roles on IT ContractHub."
         canonical="/saved"
         noIndex={true}
       />

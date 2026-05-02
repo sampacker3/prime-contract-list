@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 
 const LAST_UPDATED = "14 April 2025";
-const COMPANY_NAME = "ContractHub";
+const COMPANY_NAME = "IT ContractHub";
 const COMPANY_EMAIL = "legal@contracthub.co.uk";
 const SITE_URL = "https://contracthub.co.uk";
 
@@ -12,8 +12,8 @@ export default function Terms() {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO
-        title="Terms & Conditions — ContractHub"
-        description="Read the ContractHub Terms and Conditions governing use of the platform, subscriptions, and content."
+        title="Terms & Conditions — IT ContractHub"
+        description="Read the IT ContractHub Terms and Conditions governing use of the platform, subscriptions, and content."
         canonical="/terms"
       />
       <Navbar />
@@ -42,9 +42,9 @@ export default function Terms() {
                 </p>
               </div>
 
-              <Section title="1. About ContractHub">
+              <Section title="1. About IT ContractHub">
                 <p>
-                  ContractHub is a software-as-a-service platform that aggregates IT contract job listings
+                  IT ContractHub is a software-as-a-service platform that aggregates IT contract job listings
                   from publicly available sources across the United Kingdom. We provide tools to help IT
                   contractors discover, evaluate, and apply for contract roles.
                 </p>
@@ -73,7 +73,7 @@ export default function Terms() {
 
               <Section title="4. Subscription Plans">
                 <p>
-                  ContractHub offers free and paid (Pro) subscription tiers.
+                  IT ContractHub offers free and paid (Pro) subscription tiers.
                 </p>
                 <ul>
                   <li>
@@ -106,7 +106,7 @@ export default function Terms() {
 
               <Section title="5. Refund Policy">
                 <p>
-                  ContractHub does not offer refunds on subscription payments. When you cancel your Pro plan:
+                  IT ContractHub does not offer refunds on subscription payments. When you cancel your Pro plan:
                 </p>
                 <ul>
                   <li>Your subscription will not renew at the next billing date.</li>
@@ -137,7 +137,7 @@ export default function Terms() {
               <Section title="7. Intellectual Property">
                 <p>
                   All content, branding, software, and design elements of the Platform are owned by or
-                  licensed to ContractHub and are protected by UK and international intellectual property
+                  licensed to IT ContractHub and are protected by UK and international intellectual property
                   laws. You may not reproduce, distribute, or create derivative works from any part of the
                   Platform without our express written permission.
                 </p>
@@ -157,10 +157,10 @@ export default function Terms() {
 
               <Section title="9. AI Features">
                 <p>
-                  ContractHub offers AI-powered features including CV analysis, cover letter generation, and
+                  IT ContractHub offers AI-powered features including CV analysis, cover letter generation, and
                   application assistance ("Apply with AI"). These tools are provided as aids only. You are
                   solely responsible for reviewing and verifying any AI-generated content before submitting
-                  it to a potential client or employer. ContractHub makes no warranties as to the accuracy,
+                  it to a potential client or employer. IT ContractHub makes no warranties as to the accuracy,
                   suitability, or fitness of AI-generated outputs.
                 </p>
               </Section>
@@ -176,21 +176,21 @@ export default function Terms() {
                   <li>The Platform will be uninterrupted, error-free, or secure at all times.</li>
                 </ul>
                 <p>
-                  To the fullest extent permitted by law, ContractHub disclaims all implied warranties
+                  To the fullest extent permitted by law, IT ContractHub disclaims all implied warranties
                   including those of merchantability and fitness for a particular purpose.
                 </p>
               </Section>
 
               <Section title="11. Limitation of Liability">
                 <p>
-                  To the maximum extent permitted by applicable law, ContractHub shall not be liable for any
+                  To the maximum extent permitted by applicable law, IT ContractHub shall not be liable for any
                   indirect, incidental, special, consequential, or punitive damages, including but not limited
                   to loss of earnings, loss of contracts, or loss of data, arising from your use of or
                   inability to use the Platform.
                 </p>
                 <p>
                   Our total aggregate liability to you in connection with these Terms shall not exceed the
-                  total fees paid by you to ContractHub in the twelve months preceding the claim.
+                  total fees paid by you to IT ContractHub in the twelve months preceding the claim.
                 </p>
               </Section>
 

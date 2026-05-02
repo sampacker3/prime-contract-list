@@ -43,7 +43,7 @@ const Navbar = () => {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-brand">
               <Search className="h-4 w-4 text-primary-foreground" />
             </div>
-            ContractHub
+            IT ContractHub
           </Link>
 
           {/* Desktop nav */}

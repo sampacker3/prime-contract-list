@@ -369,8 +369,8 @@ const AccountPage = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO
-        title="My Account — ContractHub"
-        description="Manage your ContractHub account, subscription plan, and email preferences."
+        title="My Account — IT ContractHub"
+        description="Manage your IT ContractHub account, subscription plan, and email preferences."
         canonical="/account"
         noIndex={true}
       />

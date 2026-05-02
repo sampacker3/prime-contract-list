@@ -10,7 +10,7 @@ const Footer = () => (
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-brand">
               <Search className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
-            ContractHub
+            IT ContractHub
           </Link>
           <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
             Aggregating IT contracts from hundreds of sources in real-time.
@@ -28,9 +28,8 @@ const Footer = () => (
         <div>
           <h4 className="font-heading font-semibold text-foreground mb-3">Company</h4>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <span className="block">About</span>
-            <span className="block">Contact</span>
-            <span className="block">Blog</span>
+            <Link to="/about" className="block hover:text-foreground transition-colors">About</Link>
+            <Link to="/contact" className="block hover:text-foreground transition-colors">Contact</Link>
           </div>
         </div>
         <div>
@@ -42,7 +41,7 @@ const Footer = () => (
         </div>
       </div>
       <div className="mt-10 pt-6 border-t text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} ContractHub. All rights reserved.
+        © {new Date().getFullYear()} IT ContractHub. All rights reserved.
       </div>
     </div>
   </footer>

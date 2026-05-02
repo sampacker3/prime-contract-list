@@ -9,7 +9,7 @@ const steps = [
     icon: FileText,
     title: "Upload your CV",
     description:
-      "You upload your CV once to your ContractHub profile. We store it securely so it's ready whenever you find a contract you want to apply to.",
+      "You upload your CV once to your IT ContractHub profile. We store it securely so it's ready whenever you find a contract you want to apply to.",
   },
   {
     icon: Target,
