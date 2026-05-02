@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     sitemap({
       hostname: "https://itcontracthub.co.uk",
-      dynamicRoutes: ["/", "/contracts", "/about", "/contact", "/contract-sources", "/upgrade"],
+      dynamicRoutes: ["/contracts", "/about", "/contact", "/contract-sources", "/upgrade", "/privacy", "/terms"],
       exclude: ["/login", "/signup", "/account", "/alerts", "/saved", "/reset-password", "/forgot-password"],
       changefreq: "daily",
       priority: {
