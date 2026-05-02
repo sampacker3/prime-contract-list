@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark } from "lucide-react";
 import ApplyWithAIButton from "@/components/ApplyWithAIButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import AuthModal from "@/components/AuthModal";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSavedJobs } from "@/hooks/useSavedJobs";
 import type { Contract } from "@/types/database";
 
 function useContract(id: number) {
@@ -70,6 +71,7 @@ export default function ContractDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isPro } = useAuth();
+  const { savedJobIds, toggleSave } = useSavedJobs();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const { data: contract, isLoading, isError } = useContract(Number(id));
@@ -202,6 +204,15 @@ export default function ContractDetail() {
                       </Button>
                     )}
                     <ApplyWithAI size="sm" userId={user.id} contractId={contract.id} />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={savedJobIds.has(contract.id) ? "text-primary" : "text-muted-foreground hover:text-primary"}
+                      onClick={() => toggleSave.mutate(contract.id)}
+                      title={savedJobIds.has(contract.id) ? "Remove from saved" : "Save contract"}
+                    >
+                      <Bookmark className={`h-4 w-4 ${savedJobIds.has(contract.id) ? "fill-current" : ""}`} />
+                    </Button>
                     <Link
                       to="/about-apply-with-ai"
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
