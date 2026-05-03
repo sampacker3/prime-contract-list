@@ -115,65 +115,51 @@ const AlertsPage = () => {
         </div>
 
         {/* CV-based alerts */}
-        <div className="relative rounded-xl p-[1.5px] mb-8"
-          style={{
-            background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4, #a855f7, #7c3aed)",
-            backgroundSize: "300% 300%",
-            animation: "ai-border-spin 3s ease infinite",
-          }}
-        >
-          <div className="rounded-[10px] bg-card p-6">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <h2 className="font-heading font-semibold text-foreground mb-1 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Alerts based on my CV
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Automatically create alerts from the skills extracted from your uploaded CV.
-                </p>
-              </div>
-              <button
-                onClick={handleCVAlerts}
-                disabled={cvLoading || cvDone}
-                className="relative shrink-0 flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-300"
-                style={{
-                  background: cvDone
-                    ? "rgba(34,197,94,0.15)"
-                    : "rgba(139,92,246,0.10)",
-                  color: cvDone ? "#4ade80" : "#ffffff",
-                  opacity: cvLoading ? 0.7 : 1,
-                  cursor: cvLoading || cvDone ? "default" : "pointer",
-                }}
-              >
-                {cvLoading
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : cvDone
-                    ? <CheckCircle2 className="h-4 w-4" />
-                    : <Sparkles className="h-4 w-4" style={{ filter: "drop-shadow(0 0 4px rgba(139,92,246,0.6))" }} />
-                }
-                {cvLoading ? "Loading skills…" : cvDone ? "Alerts created!" : "Create from CV"}
-              </button>
+        <div className="rounded-xl border bg-card mb-8 overflow-hidden">
+          <button
+            onClick={handleCVAlerts}
+            disabled={cvLoading || cvDone}
+            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-accent transition-colors text-left disabled:cursor-default"
+          >
+            <div
+              className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)" }}
+            >
+              {cvLoading
+                ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                : cvDone
+                  ? <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                  : <Sparkles className="h-3.5 w-3.5 text-white" />
+              }
             </div>
-
-            {cvDone && cvSkillsAdded.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {cvSkillsAdded.map(skill => (
-                  <span key={skill} className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-xs text-primary font-medium">
-                    <CheckCircle2 className="h-3 w-3" />{skill}
-                  </span>
-                ))}
-              </div>
-            )}
-            {cvDone && cvSkillsAdded.length === 0 && (
-              <p className="mt-3 text-xs text-muted-foreground">All CV skills already have alerts set up.</p>
-            )}
-            {cvError && (
-              <p className="mt-3 text-xs text-destructive">
-                No CV skills found — make sure you've uploaded a CV in your account.
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">
+                {cvLoading ? "Loading CV skills…" : cvDone ? "Alerts created from CV!" : "Create alerts based on my CV"}
               </p>
-            )}
-          </div>
+              <p className="text-xs text-muted-foreground">
+                {cvDone && cvSkillsAdded.length > 0
+                  ? `Added ${cvSkillsAdded.length} alert${cvSkillsAdded.length !== 1 ? "s" : ""} from your CV skills`
+                  : cvDone
+                    ? "All CV skills already have alerts set up"
+                    : "Automatically create alerts from skills on your uploaded CV"}
+              </p>
+            </div>
+          </button>
+
+          {cvDone && cvSkillsAdded.length > 0 && (
+            <div className="px-5 pb-4 flex flex-wrap gap-2">
+              {cvSkillsAdded.map(skill => (
+                <span key={skill} className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-xs text-primary font-medium">
+                  <CheckCircle2 className="h-3 w-3" />{skill}
+                </span>
+              ))}
+            </div>
+          )}
+          {cvError && (
+            <p className="px-5 pb-4 text-xs text-destructive">
+              No CV skills found — make sure you've uploaded a CV in your account.
+            </p>
+          )}
         </div>
 
         {/* Alert list */}
