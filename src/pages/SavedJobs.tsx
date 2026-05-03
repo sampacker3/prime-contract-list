@@ -1,4 +1,4 @@
-import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X, Copy, Check } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X, Copy, Check, ClipboardList } from "lucide-react";
 import ApplyWithAIButton from "@/components/ApplyWithAIButton";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
+import { useApplications, type ApplicationStatus } from "@/hooks/useApplications";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -134,14 +135,28 @@ function formatPostedDate(createdAt: string): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
+const STATUS_STYLES: Record<ApplicationStatus, { label: string; className: string }> = {
+  applied:   { label: "Applied",   className: "bg-primary/10 text-primary border-primary/20" },
+  interview: { label: "Interview", className: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
+  offered:   { label: "Offered",   className: "bg-green-500/10 text-green-600 border-green-500/20" },
+};
+
 export default function SavedJobsPage() {
   const { user } = useAuth();
   const { savedContracts, savedLoading, toggleSave, savedJobIds } = useSavedJobs();
+  const { applications, addApplication } = useApplications();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [coverLetterId, setCoverLetterId] = useState<number | null>(null);
+  const [trackingId, setTrackingId] = useState<number | null>(null);
+  const [trackStatus, setTrackStatus] = useState<ApplicationStatus>("applied");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+
+  // Map contract_id → application for quick lookup
+  const appByContractId = new Map(
+    applications.filter(a => a.contract_id).map(a => [a.contract_id!, a])
+  );
 
   // Fetch which contracts already have an AI cover letter for this user
   const { data: coverLetterIds = new Set<number>() } = useQuery({
@@ -262,6 +277,8 @@ export default function SavedJobsPage() {
               {savedContracts.map((contract) => {
                 const postedToday = isToday(contract.created_at);
                 const expanded = expandedId === contract.id;
+                const trackerApp = appByContractId.get(contract.id);
+                const statusStyle = trackerApp ? STATUS_STYLES[trackerApp.status] : null;
 
                 return (
                   <div
@@ -271,7 +288,7 @@ export default function SavedJobsPage() {
                     <div className="p-5 cursor-pointer" onClick={() => toggleExpand(contract.id)}>
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-heading font-semibold text-foreground truncate">
                               {contract.JobTitle ?? "Untitled Role"}
                             </h3>
@@ -279,6 +296,12 @@ export default function SavedJobsPage() {
                               <Badge className="text-xs shrink-0 bg-green-500 hover:bg-green-500 text-white border-0">
                                 Posted Today
                               </Badge>
+                            )}
+                            {statusStyle && (
+                              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium shrink-0 ${statusStyle.className}`}>
+                                <ClipboardList className="h-3 w-3" />
+                                {statusStyle.label}
+                              </span>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">{contract.Company ?? "Company not listed"}</p>
@@ -356,6 +379,27 @@ export default function SavedJobsPage() {
                               />
                             </div>
                           )}
+
+                          {/* Tracker — show status or add button */}
+                          {trackerApp ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); navigate("/tracker"); }}
+                              className={`border ${statusStyle?.className}`}
+                            >
+                              <ClipboardList className="h-3.5 w-3.5 mr-1" />
+                              {statusStyle?.label} — View in Tracker
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); setTrackingId(contract.id); setTrackStatus("applied"); }}
+                            >
+                              <ClipboardList className="h-3.5 w-3.5 mr-1" /> Add to Tracker
+                            </Button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -368,6 +412,71 @@ export default function SavedJobsPage() {
       </section>
 
       <Footer />
+
+      {/* Quick-track modal */}
+      {trackingId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setTrackingId(null); }}
+        >
+          <div className="relative w-full max-w-sm rounded-2xl bg-card border shadow-xl p-6">
+            <button onClick={() => setTrackingId(null)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2 mb-1">
+              <ClipboardList className="h-4 w-4 text-primary" />
+              <h2 className="font-heading font-bold text-foreground">Add to Tracker</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4 truncate">
+              {savedContracts.find(c => c.id === trackingId)?.JobTitle ?? ""}
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Status</label>
+                <div className="flex rounded-lg border overflow-hidden text-xs font-medium bg-background">
+                  {(["applied", "interview", "offered"] as ApplicationStatus[]).map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setTrackStatus(s)}
+                      className={`flex-1 px-3 py-2 capitalize transition-colors border-r last:border-r-0 ${
+                        trackStatus === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
+                      }`}
+                    >
+                      {STATUS_STYLES[s].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-1">
+                <Button variant="outline" className="flex-1" size="sm" onClick={() => setTrackingId(null)}>Cancel</Button>
+                <Button
+                  variant="hero"
+                  className="flex-1"
+                  size="sm"
+                  disabled={addApplication.isPending}
+                  onClick={async () => {
+                    const contract = savedContracts.find(c => c.id === trackingId);
+                    await addApplication.mutateAsync({
+                      contract_id: trackingId,
+                      job_title: contract?.JobTitle ?? "Untitled Role",
+                      company: contract?.Company ?? undefined,
+                      location: contract?.Location ?? undefined,
+                      day_rate: contract?.PayRate ?? undefined,
+                      status: trackStatus,
+                      applied_at: new Date().toISOString(),
+                    });
+                    setTrackingId(null);
+                    toast.success("Added to Tracker");
+                  }}
+                >
+                  {addApplication.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add to Tracker"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {coverLetterId && (
         <CoverLetterModal
