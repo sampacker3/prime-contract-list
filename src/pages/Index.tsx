@@ -8,7 +8,7 @@ import { useProPrice } from "@/hooks/useProPrice";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Search, ArrowRight, Bell, FileText, Send,
-  Zap, Shield, TrendingUp, Clock, Users, Timer,
+  Zap, Shield, TrendingUp,
   Star, CheckCircle, ChevronDown, ChevronUp, Lock, CreditCard, Sparkles, X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -520,33 +520,6 @@ const Index = () => {
       {/* ── 3. LIVE CONTRACTS CAROUSEL — white ───────────── */}
       <ContractMarquee />
 
-      {/* ── 4. THE PROBLEM — surface-subtle (pale blue-grey) */}
-      <section className="bg-surface-subtle border-y py-20">
-        <div className="container max-w-3xl text-center">
-          <Badge variant="secondary" className="mb-4 text-xs uppercase tracking-widest font-semibold">The reality</Badge>
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6 leading-snug">
-            By the time a contract appears on a job board,{" "}
-            <span className="text-destructive">50+ contractors</span>{" "}have already applied
-          </h2>
-          <p className="text-muted-foreground text-lg leading-relaxed mb-12">
-            Traditional job boards aggregate listings daily — sometimes hourly. That lag is killing your chances. The best contracts get filled before most people even see them.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            {[
-              { icon: Clock, label: "Typical job board delay", value: "12–24 hrs", color: "text-destructive", bg: "bg-destructive/10" },
-              { icon: Users, label: "Avg. applications per role", value: "80+", color: "text-orange-500", bg: "bg-orange-500/10" },
-              { icon: Zap, label: "IT ContractHub update cycle", value: "10 mins", color: "text-primary", bg: "bg-primary/10" },
-            ].map(({ icon: Icon, label, value, color, bg }) => (
-              <div key={label} className="rounded-xl border bg-card p-5">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${bg} ${color} mb-3`}><Icon className="h-5 w-5" /></div>
-                <p className={`text-2xl font-heading font-bold ${color} mb-1`}>{value}</p>
-                <p className="text-sm text-muted-foreground">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── 5. FEATURES — white ──────────────────────────── */}
       <section className="container py-24">
         <div className="text-center max-w-2xl mx-auto mb-16">
@@ -558,6 +531,138 @@ const Index = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((f, i) => <FeatureCard key={f.title} feature={f} index={i} />)}
+        </div>
+      </section>
+
+      {/* ── 5b. AI APPLY — dark gradient ─────────────────── */}
+      <section className="relative overflow-hidden bg-background border-y py-24">
+        {/* Ambient glow */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-violet-500/10 blur-[120px]" />
+          <div className="absolute bottom-0 right-0 h-[300px] w-[400px] rounded-full bg-primary/10 blur-[100px]" />
+        </div>
+
+        <div className="container relative max-w-6xl">
+          {/* Header */}
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 mb-5">
+              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-violet-400">AI-Powered Applications</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-heading font-bold text-foreground leading-tight">
+              Stop writing cover letters.<br />
+              <span style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Let AI do it for you.
+              </span>
+            </h2>
+            <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
+              Upload your CV once. Every time you find a contract you like, we instantly generate a tailored cover letter — matched to that specific role, in seconds.
+            </p>
+          </div>
+
+          {/* 3-step visual */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+            {[
+              {
+                step: "01",
+                icon: FileText,
+                title: "Upload your CV",
+                desc: "Add your CV to your profile once. We securely store it and use it as the foundation for every application.",
+                color: "from-violet-500/20 to-violet-500/5",
+                iconColor: "text-violet-400",
+                borderColor: "border-violet-500/20",
+              },
+              {
+                step: "02",
+                icon: Search,
+                title: "Find a contract",
+                desc: "Browse thousands of live UK IT contracts updated every 10 minutes. Click the one you want to apply to.",
+                color: "from-primary/20 to-primary/5",
+                iconColor: "text-primary",
+                borderColor: "border-primary/20",
+              },
+              {
+                step: "03",
+                icon: Sparkles,
+                title: "Get your cover letter",
+                desc: "Our AI reads the job description and your CV, then writes a tailored cover letter highlighting exactly the right experience.",
+                color: "from-cyan-500/20 to-cyan-500/5",
+                iconColor: "text-cyan-400",
+                borderColor: "border-cyan-500/20",
+              },
+            ].map(({ step, icon: Icon, title, desc, color, iconColor, borderColor }) => (
+              <div key={step} className={`relative rounded-2xl border ${borderColor} bg-gradient-to-b ${color} p-6`}>
+                <span className="absolute top-4 right-5 text-5xl font-heading font-bold text-foreground/5 select-none leading-none">{step}</span>
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-background border ${borderColor} mb-4`}>
+                  <Icon className={`h-5 w-5 ${iconColor}`} />
+                </div>
+                <h3 className="font-heading font-bold text-foreground mb-2">{title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Benefits + CTA side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <h3 className="text-2xl font-heading font-bold text-foreground mb-6">What you get with Apply with AI</h3>
+              <ul className="space-y-3">
+                {[
+                  "Cover letter tailored to every role — not a generic template",
+                  "AI reads both your CV and the job spec to find the perfect match",
+                  "Flags skill gaps and keywords you're missing for that role",
+                  "Apply to more contracts in less time, without burning out",
+                  "Be the first to apply — we're fast, and so is our AI",
+                ].map((benefit) => (
+                  <li key={benefit} className="flex items-start gap-3 text-sm text-muted-foreground">
+                    <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    {benefit}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Mock cover letter card */}
+            <div
+              className="rounded-2xl p-[1.5px]"
+              style={{
+                background: "linear-gradient(135deg, rgba(124,58,237,0.5), rgba(59,130,246,0.4), rgba(6,182,212,0.3))",
+              }}
+            >
+              <div className="rounded-2xl bg-card p-6 space-y-3">
+                <div className="flex items-center gap-2 mb-4">
+                  <div
+                    className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)" }}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground">AI-generated cover letter</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">Ready in 3s</Badge>
+                </div>
+                {[
+                  { w: "w-full", opacity: "opacity-60" },
+                  { w: "w-5/6", opacity: "opacity-50" },
+                  { w: "w-full", opacity: "opacity-60" },
+                  { w: "w-4/5", opacity: "opacity-40" },
+                  { w: "w-full", opacity: "opacity-60" },
+                  { w: "w-3/4", opacity: "opacity-50" },
+                ].map(({ w, opacity }, i) => (
+                  <div key={i} className={`h-2.5 rounded-full bg-foreground/20 ${w} ${opacity}`} />
+                ))}
+                <div className="pt-2 flex items-center gap-2">
+                  <div className="h-2.5 w-24 rounded-full bg-primary/40" />
+                  <div className="h-2.5 w-16 rounded-full bg-primary/25" />
+                </div>
+                <div className="pt-3 border-t border-border flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Matched to: <span className="text-primary font-medium">Senior Python Developer</span></span>
+                  <Button variant="hero" size="sm" className="h-7 text-xs px-3" asChild>
+                    <Link to="/about-apply-with-ai">Learn more</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -618,9 +723,15 @@ const Index = () => {
                 </li>
               ))}
             </ul>
-            <Button asChild size="lg" className="w-full bg-white text-primary hover:bg-white/90 font-semibold rounded-xl h-12">
-              <Link to="/upgrade"><CreditCard className="h-4 w-4 mr-2" />Get Pro Access</Link>
-            </Button>
+            {isPro ? (
+              <div className="w-full flex items-center justify-center gap-2 h-12 rounded-xl bg-white/20 text-white font-semibold text-sm">
+                <CheckCircle className="h-4 w-4 shrink-0" /> You're already on Pro, nice!
+              </div>
+            ) : (
+              <Button asChild size="lg" className="w-full bg-white text-primary hover:bg-white/90 font-semibold rounded-xl h-12">
+                <Link to="/upgrade"><CreditCard className="h-4 w-4 mr-2" />Get Pro Access</Link>
+              </Button>
+            )}
           </div>
           <p className="text-primary-foreground/40 text-sm flex items-center justify-center gap-1.5">
             <Lock className="h-3.5 w-3.5" /> Secure checkout via Stripe

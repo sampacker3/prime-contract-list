@@ -441,45 +441,54 @@ const AccountPage = () => {
                   href={`/contract/${contract.id}`}
                   className="block rounded-lg border bg-background hover:bg-accent/40 transition-colors p-4 group"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground text-sm leading-snug truncate group-hover:text-primary transition-colors">
-                        {contract.JobTitle ?? "Untitled Role"}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-                        {contract.Company && (
-                          <span className="flex items-center gap-1">
-                            <Building2 className="h-3 w-3" /> {contract.Company}
-                          </span>
-                        )}
-                        {contract.Location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" /> {contract.Location}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {contract.matchedSkills.slice(0, 5).map(skill => (
-                          <span key={skill} className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            {skill}
-                          </span>
-                        ))}
-                        {contract.matchedSkills.length > 5 && (
-                          <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                            +{contract.matchedSkills.length - 5} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  {/* Title row */}
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <p className="font-medium text-foreground text-sm leading-snug group-hover:text-primary transition-colors min-w-0 flex-1">
+                      {contract.JobTitle ?? "Untitled Role"}
+                    </p>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-0.5" />
+                  </div>
+
+                  {/* Company + location */}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground mb-2">
+                    {contract.Company && (
+                      <span className="flex items-center gap-1 min-w-0">
+                        <Building2 className="h-3 w-3 shrink-0" />
+                        <span className="truncate max-w-[160px]">{contract.Company}</span>
+                      </span>
+                    )}
+                    {contract.Location && (
+                      <span className="flex items-center gap-1 min-w-0">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span className="truncate max-w-[160px]">{contract.Location}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Badges inline */}
+                  {(contract.PayRate || contract.IR35Status) && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
                       {contract.PayRate && (
-                        <Badge variant="secondary" className="text-xs whitespace-nowrap">{contract.PayRate}</Badge>
+                        <Badge variant="secondary" className="text-xs">{contract.PayRate}</Badge>
                       )}
                       {contract.IR35Status && (
-                        <Badge variant="outline" className="text-xs whitespace-nowrap">{contract.IR35Status}</Badge>
+                        <Badge variant="outline" className="text-xs">{contract.IR35Status}</Badge>
                       )}
-                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors mt-1" />
                     </div>
+                  )}
+
+                  {/* Skill tags */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {contract.matchedSkills.slice(0, 5).map(skill => (
+                      <span key={skill} className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        {skill}
+                      </span>
+                    ))}
+                    {contract.matchedSkills.length > 5 && (
+                      <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        +{contract.matchedSkills.length - 5} more
+                      </span>
+                    )}
                   </div>
                 </a>
               ))}

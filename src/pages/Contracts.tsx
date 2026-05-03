@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import AuthModal from "@/components/AuthModal";
 import { supabase } from "@/lib/supabase";
 import type { Contract } from "@/types/database";
 import SEO from "@/components/SEO";
@@ -16,9 +17,9 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 
 const PAGE_SIZE = 25;
 
-function useContracts(search: string, location: string, page: number, ir35: "all" | "outside" | "inside", cvSkills?: string[]) {
+function useContracts(search: string, location: string, page: number, ir35: "all" | "outside" | "inside", date: "all" | "24h" | "week" | "month", cvSkills?: string[]) {
   return useQuery({
-    queryKey: ["contracts", search, location, page, ir35, cvSkills],
+    queryKey: ["contracts", search, location, page, ir35, date, cvSkills],
     queryFn: async () => {
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -30,7 +31,6 @@ function useContracts(search: string, location: string, page: number, ir35: "all
         .range(from, to);
 
       if (cvSkills && cvSkills.length > 0) {
-        // Build OR filter across all CV skills for title + description
         const filters = cvSkills.slice(0, 10).flatMap(s => [
           `JobTitle.ilike.%${s}%`,
           `Description.ilike.%${s}%`,
@@ -50,6 +50,15 @@ function useContracts(search: string, location: string, page: number, ir35: "all
         query = query.eq("IR35Status", "Outside IR35");
       } else if (ir35 === "inside") {
         query = query.eq("IR35Status", "Inside IR35");
+      }
+
+      if (date !== "all") {
+        const now = new Date();
+        const cutoff = new Date(now);
+        if (date === "24h") cutoff.setHours(now.getHours() - 24);
+        else if (date === "week") cutoff.setDate(now.getDate() - 7);
+        else if (date === "month") cutoff.setMonth(now.getMonth() - 1);
+        query = query.gte("created_at", cutoff.toISOString());
       }
 
       const { data, error, count } = await query;
@@ -114,18 +123,29 @@ const ContractsPage = () => {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"newest" | "relevance">("newest");
   const [ir35Filter, setIr35Filter] = useState<"all" | "outside" | "inside">("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "24h" | "week" | "month">("all");
   const [page, setPage] = useState(0);
 
-  const { user, isPro, proLoading } = useAuth();
+  const { user, loading: authLoading, isPro, proLoading } = useAuth();
   const { cvExists } = useCVExists();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+
+  // Show auth modal as soon as we know the user is not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      setShowAuthModal(true);
+    } else if (user) {
+      setShowAuthModal(false);
+    }
+  }, [authLoading, user]);
   const [cvSearchMode, setCvSearchMode] = useState(false);
   const [cvSkills, setCvSkills] = useState<string[]>([]);
   const [cvSkillsLoading, setCvSkillsLoading] = useState(false);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
-  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page, ir35Filter, cvSearchMode ? cvSkills : undefined);
+  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page, ir35Filter, dateFilter, cvSearchMode ? cvSkills : undefined);
   const raw = result?.data ?? [];
   const totalCount = result?.total ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -171,7 +191,7 @@ const ContractsPage = () => {
 
   const handleBookmark = (e: React.MouseEvent, jobId: number) => {
     e.stopPropagation();
-    if (!user) { navigate("/signup"); return; }
+    if (!user) { setShowAuthModal(true); return; }
     if (!isPro) { navigate("/upgrade"); return; }
     toggleSave.mutate(jobId);
   };
@@ -285,49 +305,67 @@ const ContractsPage = () => {
             </Button>
           </form>
 
-          {/* IR35 filter */}
-          <div className="flex flex-wrap items-center gap-2 mt-4">
-            <span className="text-xs font-medium text-muted-foreground shrink-0">IR35 status:</span>
-            <div className="flex rounded-lg border overflow-hidden text-xs font-medium bg-background shrink-0">
-              {(
-                [
-                  { value: "all",     label: "All" },
-                  { value: "outside", label: "Outside IR35" },
-                  { value: "inside",  label: "Inside IR35" },
-                ] as const
-              ).map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => { setIr35Filter(value); setPage(0); }}
-                  className={`px-3 py-1.5 transition-colors border-r last:border-r-0 ${
-                    ir35Filter === value
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+          {/* Filters row */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-medium text-muted-foreground">Posted:</span>
+              <div className="flex rounded-lg border overflow-hidden text-xs font-medium bg-background">
+                {(
+                  [
+                    { value: "all",   label: "Any time" },
+                    { value: "24h",   label: "Last 24h" },
+                    { value: "week",  label: "Last 7 days" },
+                    { value: "month", label: "Last month" },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => { setDateFilter(value); setPage(0); }}
+                    className={`px-3 py-1.5 transition-colors border-r last:border-r-0 ${
+                      dateFilter === value
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-medium text-muted-foreground">IR35:</span>
+              <div className="flex rounded-lg border overflow-hidden text-xs font-medium bg-background">
+                {(
+                  [
+                    { value: "all",     label: "All" },
+                    { value: "outside", label: "Outside" },
+                    { value: "inside",  label: "Inside" },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => { setIr35Filter(value); setPage(0); }}
+                    className={`px-3 py-1.5 transition-colors border-r last:border-r-0 ${
+                      ir35Filter === value
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Sign up banner — logged out users */}
-      {!user && (
-        <div className="bg-primary/5 border-b border-primary/20">
-          <div className="container py-3 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-2 text-sm">
-              <Lock className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-foreground font-medium">Create a free account to unlock full contract details.</span>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="hero" size="sm" asChild><Link to="/signup">Sign Up Free</Link></Button>
-              <Button variant="outline" size="sm" asChild><Link to="/login">Log In</Link></Button>
-            </div>
-          </div>
-        </div>
+      {/* Auth modal — shown to non-logged-in users; closing navigates home */}
+      {showAuthModal && (
+        <AuthModal onClose={() => { setShowAuthModal(false); navigate("/"); }} />
       )}
 
       {/* Upgrade banner — only render once plan status is confirmed */}

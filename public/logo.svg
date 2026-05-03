@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 100" width="420" height="100">
+  <defs>
+    <linearGradient id="iconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+  </defs>
+
+  <!-- Icon: rounded square -->
+  <rect x="0" y="10" width="80" height="80" rx="18" fill="url(#iconBg)" />
+
+  <!-- Magnifying glass circle -->
+  <circle cx="35" cy="43" r="14" fill="none" stroke="white" stroke-width="5.5" stroke-linecap="round"/>
+  <!-- Magnifying glass handle -->
+  <line x1="45" y1="53" x2="57" y2="65" stroke="white" stroke-width="5.5" stroke-linecap="round"/>
+
+  <!-- "IT" in gradient -->
+  <text
+    x="100"
+    y="62"
+    font-family="'Space Grotesk', 'Inter', system-ui, sans-serif"
+    font-size="42"
+    font-weight="700"
+    fill="url(#textGrad)"
+    letter-spacing="-1"
+  >IT</text>
+
+  <!-- "ContractHub" in white/light -->
+  <text
+    x="156"
+    y="62"
+    font-family="'Space Grotesk', 'Inter', system-ui, sans-serif"
+    font-size="42"
+    font-weight="700"
+    fill="#f1f5f9"
+    letter-spacing="-1"
+  > ContractHub</text>
+
+  <!-- Tagline -->
+  <text
+    x="101"
+    y="82"
+    font-family="'Inter', system-ui, sans-serif"
+    font-size="13"
+    font-weight="400"
+    fill="#64748b"
+    letter-spacing="0.5"
+  >UK IT Contract Search · Updated Every 10 Minutes</text>
+</svg>

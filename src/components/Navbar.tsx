@@ -7,13 +7,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/AuthModal";
 
 const publicLinks = [
-  { label: "Browse Contracts", to: "/contracts" },
+  { label: "Browse Contracts", to: "/contracts", authOnly: false },
 ];
 
 const protectedLinks = [
-  { label: "Saved", to: "/saved" },
-  { label: "Email Alerts", to: "/alerts" },
-  { label: "My Account", to: "/account" },
+  { label: "Saved", to: "/saved", authOnly: true },
+  { label: "Email Alerts", to: "/alerts", authOnly: true },
+  { label: "My Account", to: "/account", authOnly: false },
 ];
 
 const allLinks = [...publicLinks, ...protectedLinks];
@@ -63,7 +63,7 @@ const Navbar = () => {
               </Link>
             ))}
             {/* Protected links */}
-            {protectedLinks.map((link) => (
+            {protectedLinks.filter(link => !link.authOnly || user).map((link) => (
               <button
                 key={link.to}
                 onClick={() => handleProtectedClick(link.to)}
@@ -114,7 +114,10 @@ const Navbar = () => {
         {/* Mobile menu */}
         {mobileOpen && (
           <div className="md:hidden border-t bg-background px-4 pb-4 pt-2 space-y-1">
-            {allLinks.map((link) => {
+            {allLinks.filter(link => {
+              const pl = protectedLinks.find(l => l.to === link.to);
+              return !pl?.authOnly || user;
+            }).map((link) => {
               const isProtected = protectedLinks.some((l) => l.to === link.to);
               if (isProtected) {
                 return (
