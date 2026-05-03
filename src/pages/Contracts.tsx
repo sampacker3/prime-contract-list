@@ -309,58 +309,54 @@ const ContractsPage = () => {
           <div className="flex flex-col gap-2 mt-4">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs font-medium text-muted-foreground shrink-0">Posted:</span>
-              <div className="flex-1 overflow-x-auto scrollbar-none">
-                <div className="flex rounded-lg border text-xs font-medium bg-background w-max">
-                  {(
-                    [
-                      { value: "all",   label: "Any time" },
-                      { value: "24h",   label: "Last 24h" },
-                      { value: "week",  label: "Last 7 days" },
-                      { value: "month", label: "Last month" },
-                    ] as const
-                  ).map(({ value, label }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => { setDateFilter(value); setPage(0); }}
-                      className={`px-3 py-1.5 whitespace-nowrap transition-colors border-r last:border-r-0 ${
-                        dateFilter === value
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex flex-1 rounded-lg border text-xs font-medium bg-background overflow-x-auto scrollbar-none min-w-0">
+                {(
+                  [
+                    { value: "all",   label: "Any time" },
+                    { value: "24h",   label: "Last 24h" },
+                    { value: "week",  label: "Last 7 days" },
+                    { value: "month", label: "Last month" },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => { setDateFilter(value); setPage(0); }}
+                    className={`px-3 py-1.5 whitespace-nowrap transition-colors border-r last:border-r-0 shrink-0 ${
+                      dateFilter === value
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs font-medium text-muted-foreground shrink-0">IR35:</span>
-              <div className="flex-1 overflow-x-auto scrollbar-none">
-                <div className="flex rounded-lg border text-xs font-medium bg-background w-max">
-                  {(
-                    [
-                      { value: "all",     label: "All" },
-                      { value: "outside", label: "Outside IR35" },
-                      { value: "inside",  label: "Inside IR35" },
-                    ] as const
-                  ).map(({ value, label }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => { setIr35Filter(value); setPage(0); }}
-                      className={`px-3 py-1.5 whitespace-nowrap transition-colors border-r last:border-r-0 ${
-                        ir35Filter === value
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex flex-1 rounded-lg border text-xs font-medium bg-background overflow-x-auto scrollbar-none min-w-0">
+                {(
+                  [
+                    { value: "all",     label: "All" },
+                    { value: "outside", label: "Outside IR35" },
+                    { value: "inside",  label: "Inside IR35" },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => { setIr35Filter(value); setPage(0); }}
+                    className={`px-3 py-1.5 whitespace-nowrap transition-colors border-r last:border-r-0 shrink-0 ${
+                      ir35Filter === value
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
