@@ -261,10 +261,10 @@ function StatBar() {
 function FeatureCard({ feature, index }: { feature: typeof features[0]; index: number }) {
   const { ref, visible } = useScrollReveal();
   return (
-    <div ref={ref} className="group relative rounded-2xl border bg-card p-6 hover:border-primary/40 hover:shadow-brand transition-all duration-500"
+    <div ref={ref} className="relative rounded-2xl border bg-card p-6"
       style={{ opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(32px)", transition: "opacity 0.6s ease, transform 0.6s ease", transitionDelay: `${index * 80}ms` }}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary mb-4">
         <feature.icon className="h-6 w-6" />
       </div>
       <Badge variant="secondary" className="mb-3 text-xs font-semibold text-primary bg-primary/10">{feature.highlight}</Badge>
