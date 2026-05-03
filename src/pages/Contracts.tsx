@@ -171,7 +171,8 @@ const ContractsPage = () => {
 
   const handleBookmark = (e: React.MouseEvent, jobId: number) => {
     e.stopPropagation();
-    if (!isPro) { navigate("/account"); return; }
+    if (!user) { navigate("/signup"); return; }
+    if (!isPro) { navigate("/upgrade"); return; }
     toggleSave.mutate(jobId);
   };
 
@@ -312,6 +313,22 @@ const ContractsPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Sign up banner — logged out users */}
+      {!user && (
+        <div className="bg-primary/5 border-b border-primary/20">
+          <div className="container py-3 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2 text-sm">
+              <Lock className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-foreground font-medium">Create a free account to unlock full contract details.</span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="hero" size="sm" asChild><Link to="/signup">Sign Up Free</Link></Button>
+              <Button variant="outline" size="sm" asChild><Link to="/login">Log In</Link></Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Upgrade banner — only render once plan status is confirmed */}
       {user && !proLoading && !isPro && (

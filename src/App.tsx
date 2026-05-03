@@ -56,7 +56,7 @@ const App = () => (
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
+            <Route path="/contracts" element={<Contracts />} />
             <Route path="/search-preview" element={<SearchPreview />} />
             <Route path="/contract/:id" element={<ContractDetail />} />
             <Route path="/login" element={<Login />} />
