@@ -305,11 +305,11 @@ const ContractsPage = () => {
             </Button>
           </form>
 
-          {/* Filters row */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4">
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs font-medium text-muted-foreground">Posted:</span>
-              <div className="flex rounded-lg border overflow-hidden text-xs font-medium bg-background">
+          {/* Filters */}
+          <div className="flex flex-col gap-2 mt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">Posted:</span>
+              <div className="flex rounded-lg border text-xs font-medium bg-background overflow-x-auto scrollbar-none">
                 {(
                   [
                     { value: "all",   label: "Any time" },
@@ -322,7 +322,7 @@ const ContractsPage = () => {
                     key={value}
                     type="button"
                     onClick={() => { setDateFilter(value); setPage(0); }}
-                    className={`px-3 py-1.5 transition-colors border-r last:border-r-0 ${
+                    className={`px-3 py-1.5 whitespace-nowrap transition-colors border-r last:border-r-0 ${
                       dateFilter === value
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -334,21 +334,21 @@ const ContractsPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs font-medium text-muted-foreground">IR35:</span>
-              <div className="flex rounded-lg border overflow-hidden text-xs font-medium bg-background">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">IR35:</span>
+              <div className="flex rounded-lg border text-xs font-medium bg-background overflow-x-auto scrollbar-none">
                 {(
                   [
                     { value: "all",     label: "All" },
-                    { value: "outside", label: "Outside" },
-                    { value: "inside",  label: "Inside" },
+                    { value: "outside", label: "Outside IR35" },
+                    { value: "inside",  label: "Inside IR35" },
                   ] as const
                 ).map(({ value, label }) => (
                   <button
                     key={value}
                     type="button"
                     onClick={() => { setIr35Filter(value); setPage(0); }}
-                    className={`px-3 py-1.5 transition-colors border-r last:border-r-0 ${
+                    className={`px-3 py-1.5 whitespace-nowrap transition-colors border-r last:border-r-0 ${
                       ir35Filter === value
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -453,42 +453,47 @@ const ContractsPage = () => {
                 >
                   {/* Card header — always visible, click to expand */}
                   <div
-                    className="p-5 cursor-pointer"
+                    className="p-4 md:p-5 cursor-pointer"
                     onClick={() => toggleExpand(contract.id)}
                   >
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="font-heading font-semibold text-foreground truncate">
+                        {/* Title + badges */}
+                        <div className="flex items-start gap-2 mb-1 flex-wrap">
+                          <h3 className="font-heading font-semibold text-foreground text-sm md:text-base leading-snug">
                             {contract.JobTitle ?? "Untitled Role"}
                           </h3>
-                          {isPro && contract.PayRate && (
-                            <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400 shrink-0">
-                              {contract.PayRate}
-                            </span>
-                          )}
                           {postedToday && (
-                            <Badge className="text-xs shrink-0 bg-green-500 hover:bg-green-500 text-white border-0">
-                              Posted Today
+                            <Badge className="text-xs shrink-0 bg-green-500 hover:bg-green-500 text-white border-0 mt-0.5">
+                              New
                             </Badge>
                           )}
                         </div>
+
+                        {/* Company */}
                         {isPro ? (
-                          <p className="text-sm text-muted-foreground">{contract.Company ?? "Company not listed"}</p>
+                          <p className="text-sm text-muted-foreground truncate">{contract.Company ?? "Company not listed"}</p>
                         ) : (
                           <p className="text-sm text-muted-foreground blur-sm select-none opacity-50 w-32">██████████ Ltd</p>
                         )}
-                        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
+
+                        {/* Meta row */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
                           {isPro ? (
                             <>
                               {contract.Location && (
-                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{contract.Location}</span>
+                                <span className="flex items-center gap-1 truncate max-w-[180px]"><MapPin className="h-3 w-3 shrink-0" />{contract.Location}</span>
                               )}
                               {contract.EmploymentType && (
-                                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{contract.EmploymentType}</span>
+                                <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{contract.EmploymentType}</span>
                               )}
                               {contract.IR35Status && (
-                                <span className="flex items-center gap-1">{contract.IR35Status}</span>
+                                <span>{contract.IR35Status}</span>
+                              )}
+                              {isPro && contract.PayRate && (
+                                <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
+                                  {contract.PayRate}
+                                </span>
                               )}
                             </>
                           ) : (
@@ -496,21 +501,21 @@ const ContractsPage = () => {
                               <MapPin className="h-3 w-3" />London, UK · Contract
                             </span>
                           )}
+                          <span className="text-muted-foreground/60">{formatPostedDate(contract.created_at)}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs text-muted-foreground">
-                          {formatPostedDate(contract.created_at)}
-                        </span>
+
+                      {/* Actions — always top-right */}
+                      <div className="flex items-center gap-1 shrink-0">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className={savedJobIds.has(contract.id) ? "text-primary" : "text-muted-foreground hover:text-primary"}
+                          className={`h-8 w-8 ${savedJobIds.has(contract.id) ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
                           onClick={(e) => handleBookmark(e, contract.id)}
                         >
                           <Bookmark className={`h-4 w-4 ${savedJobIds.has(contract.id) ? "fill-current" : ""}`} />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
                       </div>
