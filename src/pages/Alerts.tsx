@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Plus, Trash2, Bell, Search, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Mail, Plus, Trash2, Bell, Search, Loader2, Sparkles, CheckCircle2, PauseCircle, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 
 const AlertsPage = () => {
-  const { alerts, isLoading, createAlert, deleteAlert, toggleAlert } = useAlerts();
+  const { alerts, isLoading, createAlert, deleteAlert, toggleAlert, deleteAll, pauseAll } = useAlerts();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [newKeyword, setNewKeyword] = useState("");
@@ -163,9 +163,43 @@ const AlertsPage = () => {
         </div>
 
         {/* Alert list */}
-        <h2 className="font-heading font-semibold text-foreground mb-4">
-          Your Alerts ({alerts.length})
-        </h2>
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <h2 className="font-heading font-semibold text-foreground">
+            Your Alerts ({alerts.length})
+          </h2>
+          {alerts.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => pauseAll.mutate(alerts.some(a => a.enabled) ? false : true)}
+                disabled={pauseAll.isPending}
+                className="text-xs gap-1.5"
+              >
+                {pauseAll.isPending
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : alerts.some(a => a.enabled)
+                    ? <PauseCircle className="h-3.5 w-3.5" />
+                    : <PlayCircle className="h-3.5 w-3.5" />
+                }
+                {alerts.some(a => a.enabled) ? "Pause all" : "Resume all"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => deleteAll.mutate()}
+                disabled={deleteAll.isPending}
+                className="text-xs gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60 hover:bg-destructive/5"
+              >
+                {deleteAll.isPending
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Trash2 className="h-3.5 w-3.5" />
+                }
+                Remove all
+              </Button>
+            </div>
+          )}
+        </div>
 
         {isLoading && (
           <div className="flex items-center justify-center py-16">

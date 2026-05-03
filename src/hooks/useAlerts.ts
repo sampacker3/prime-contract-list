@@ -52,5 +52,23 @@ export function useAlerts() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alerts', user?.id] }),
   })
 
-  return { alerts, isLoading, createAlert, deleteAlert, toggleAlert }
+  const deleteAll = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('Not authenticated')
+      const { error } = await supabase.from('alerts').delete().eq('user_id', user.id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alerts', user?.id] }),
+  })
+
+  const pauseAll = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!user) throw new Error('Not authenticated')
+      const { error } = await supabase.from('alerts').update({ enabled }).eq('user_id', user.id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alerts', user?.id] }),
+  })
+
+  return { alerts, isLoading, createAlert, deleteAlert, toggleAlert, deleteAll, pauseAll }
 }
