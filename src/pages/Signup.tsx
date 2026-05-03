@@ -94,7 +94,7 @@ export default function Signup() {
       />
       <Navbar />
 
-      <main className="flex-1 flex items-stretch">
+      <main className="flex-1 flex items-stretch" style={{ minHeight: "calc(100vh - 64px)" }}>
         {/* ── Left: marketing panel ─────────────────────── */}
         <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-background border-r flex-col justify-center px-14 xl:px-20 py-16">
           {/* Gradient orbs */}
