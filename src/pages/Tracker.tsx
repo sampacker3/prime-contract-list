@@ -22,10 +22,9 @@ const COLUMNS: {
   badge: string;
   dot: string;
 }[] = [
-  { status: "applied",   label: "Applied",   colour: "border-primary/30 bg-primary/5",      badge: "bg-primary/10 text-primary",           dot: "bg-primary" },
-  { status: "interview", label: "Interview",  colour: "border-amber-500/30 bg-amber-500/5",  badge: "bg-amber-500/10 text-amber-500",        dot: "bg-amber-500" },
-  { status: "offered",   label: "Offered",    colour: "border-green-500/30 bg-green-500/5",  badge: "bg-green-500/10 text-green-600",        dot: "bg-green-500" },
-  { status: "rejected",  label: "Rejected",   colour: "border-muted/50 bg-muted/20",         badge: "bg-muted text-muted-foreground",        dot: "bg-muted-foreground" },
+  { status: "applied",   label: "Applied",   colour: "border-primary/30 bg-primary/5",      badge: "bg-primary/10 text-primary",    dot: "bg-primary" },
+  { status: "interview", label: "Interview",  colour: "border-amber-500/30 bg-amber-500/5",  badge: "bg-amber-500/10 text-amber-500", dot: "bg-amber-500" },
+  { status: "offered",   label: "Offered",    colour: "border-green-500/30 bg-green-500/5",  badge: "bg-green-500/10 text-green-600", dot: "bg-green-500" },
 ];
 
 function formatDate(iso: string) {
@@ -312,9 +311,9 @@ export default function TrackerPage() {
   const byStatus = (status: ApplicationStatus) => applications.filter(a => a.status === status);
 
   const stats = [
-    { label: "Total",      value: applications.length,           icon: BriefcaseBusiness },
-    { label: "Interviews", value: byStatus("interview").length,  icon: CalendarDays },
-    { label: "Offers",     value: byStatus("offered").length,    icon: CheckCircle2 },
+    { label: "Total",      value: applications.length,          icon: BriefcaseBusiness },
+    { label: "Interviews", value: byStatus("interview").length, icon: CalendarDays },
+    { label: "Offers",     value: byStatus("offered").length,   icon: CheckCircle2 },
     { label: "Win rate",   value: applications.length > 0 ? `${Math.round((byStatus("offered").length / applications.length) * 100)}%` : "—", icon: TrendingUp },
   ];
 

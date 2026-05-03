@@ -39,7 +39,10 @@ export function useSavedJobs() {
         .select('*')
         .in('id', jobIds)
       if (contractsError) throw contractsError
-      return contracts ?? []
+
+      // Re-sort contracts to match save-date order (saved is already newest-first)
+      const saveOrder = new Map(saved.map((s, i) => [s.JobID, i]))
+      return (contracts ?? []).sort((a, b) => (saveOrder.get(a.id) ?? 999) - (saveOrder.get(b.id) ?? 999))
     },
   })
 
