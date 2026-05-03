@@ -309,7 +309,7 @@ const ContractsPage = () => {
           <div className="flex flex-col gap-2 mt-4">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs font-medium text-muted-foreground shrink-0">Posted:</span>
-              <div className="flex flex-1 rounded-lg border text-xs font-medium bg-background overflow-x-auto scrollbar-none min-w-0">
+              <div className="flex rounded-lg border text-xs font-medium bg-background overflow-x-auto scrollbar-none">
                 {(
                   [
                     { value: "all",   label: "Any time" },
