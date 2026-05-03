@@ -11,6 +11,7 @@ import { useSavedJobs } from "@/hooks/useSavedJobs";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 function CoverLetterModal({ contractId, jobTitle, onClose }: { contractId: number; jobTitle: string | null; onClose: () => void }) {
   const { user } = useAuth();
@@ -182,9 +183,33 @@ export default function SavedJobsPage() {
         next.add(contractId);
         return next;
       });
+
+      // Auto-add to Application Tracker if not already tracked
+      const contract = savedContracts.find(c => c.id === contractId);
+      const { data: existing } = await supabase
+        .from("applications")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("contract_id", contractId)
+        .maybeSingle();
+
+      if (!existing) {
+        await supabase.from("applications").insert({
+          user_id: user.id,
+          contract_id: contractId,
+          job_title: contract?.JobTitle ?? "Untitled Role",
+          company: contract?.Company ?? null,
+          location: contract?.Location ?? null,
+          day_rate: contract?.PayRate ?? null,
+          status: "applied",
+          applied_at: new Date().toISOString(),
+        });
+        toast.success("Added to your Application Tracker", { description: contract?.JobTitle ?? undefined });
+      }
+
       setCoverLetterId(contractId);
     } catch {
-      // webhook fire-and-forget — ignore errors
+      // fire-and-forget — ignore errors
     }
   };
 

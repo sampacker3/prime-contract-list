@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
 import type { Contract } from "@/types/database";
+import { toast } from "sonner";
 
 function useContract(id: number) {
   return useQuery({
@@ -40,7 +41,12 @@ function formatPostedDate(createdAt: string): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function ApplyWithAI({ size = "default", userId, contractId }: { size?: "sm" | "default"; userId: string; contractId: number }) {
+function ApplyWithAI({ size = "default", userId, contractId, contract }: {
+  size?: "sm" | "default";
+  userId: string;
+  contractId: number;
+  contract?: Contract;
+}) {
   const navigate = useNavigate();
 
   const handleApply = async () => {
@@ -55,6 +61,28 @@ function ApplyWithAI({ size = "default", userId, contractId }: { size?: "sm" | "
         .from("UserSavedJobs")
         .upsert({ UserID: userId, JobID: contractId }, { onConflict: "UserID,JobID", ignoreDuplicates: true }),
     ]);
+
+    // Auto-add to Application Tracker if not already tracked
+    const { data: existing } = await supabase
+      .from("applications")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("contract_id", contractId)
+      .maybeSingle();
+
+    if (!existing) {
+      await supabase.from("applications").insert({
+        user_id: userId,
+        contract_id: contractId,
+        job_title: contract?.JobTitle ?? "Untitled Role",
+        company: contract?.Company ?? null,
+        location: contract?.Location ?? null,
+        day_rate: contract?.PayRate ?? null,
+        status: "applied",
+        applied_at: new Date().toISOString(),
+      });
+      toast.success("Added to your Application Tracker", { description: contract?.JobTitle ?? undefined });
+    }
   };
 
   return (
@@ -203,7 +231,7 @@ export default function ContractDetail() {
                         </a>
                       </Button>
                     )}
-                    <ApplyWithAI size="sm" userId={user.id} contractId={contract.id} />
+                    <ApplyWithAI size="sm" userId={user.id} contractId={contract.id} contract={contract} />
                     <Button
                       variant="ghost"
                       size="icon"
