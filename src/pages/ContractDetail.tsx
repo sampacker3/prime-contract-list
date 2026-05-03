@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark, FileText } from "lucide-react";
 import ApplyWithAIButton from "@/components/ApplyWithAIButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,13 +41,27 @@ function formatPostedDate(createdAt: string): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function ApplyWithAI({ size = "default", userId, contractId, contract }: {
+function ApplyWithAI({ size = "default", userId, contractId, contract, hasCoverLetter, onCoverLetterCreated }: {
   size?: "sm" | "default";
   userId: string;
   contractId: number;
   contract?: Contract;
+  hasCoverLetter: boolean;
+  onCoverLetterCreated: () => void;
 }) {
   const navigate = useNavigate();
+
+  if (hasCoverLetter) {
+    return (
+      <Button
+        variant="outline"
+        size={size}
+        onClick={() => navigate(`/saved?cover=${contractId}`)}
+      >
+        <FileText className="h-3.5 w-3.5 mr-1.5" /> See Cover Letter
+      </Button>
+    );
+  }
 
   const handleApply = async () => {
     await Promise.all([
@@ -83,6 +97,8 @@ function ApplyWithAI({ size = "default", userId, contractId, contract }: {
       });
       toast.success("Added to your Application Tracker", { description: contract?.JobTitle ?? undefined });
     }
+
+    onCoverLetterCreated();
   };
 
   return (
@@ -102,10 +118,35 @@ export default function ContractDetail() {
   const { savedJobIds, toggleSave } = useSavedJobs();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
+  const queryClient = useQueryClient();
   const { data: contract, isLoading, isError } = useContract(Number(id));
   const isToday = contract?.created_at
     ? new Date(contract.created_at) >= new Date(new Date().setHours(0, 0, 0, 0))
     : false;
+
+  // Check if a cover letter already exists for this contract — same query key as SavedJobs
+  const { data: coverLetterIds = new Set<number>() } = useQuery({
+    queryKey: ['ai-apply-ids', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('UserAIApplyContracts')
+        .select('JobID')
+        .eq('UserID', user!.id);
+      return new Set<number>((data ?? []).map((r: { JobID: number }) => r.JobID));
+    },
+    staleTime: 60 * 1000,
+  });
+
+  const hasCoverLetter = coverLetterIds.has(Number(id));
+
+  const markCoverLetterCreated = () => {
+    queryClient.setQueryData(['ai-apply-ids', user?.id], (prev: Set<number>) => {
+      const next = new Set(prev);
+      next.add(Number(id));
+      return next;
+    });
+  };
 
   const LockedCTA = () => (
     <div className="text-center mt-4">
@@ -231,7 +272,14 @@ export default function ContractDetail() {
                         </a>
                       </Button>
                     )}
-                    <ApplyWithAI size="sm" userId={user.id} contractId={contract.id} contract={contract} />
+                    <ApplyWithAI
+                      size="sm"
+                      userId={user.id}
+                      contractId={contract.id}
+                      contract={contract}
+                      hasCoverLetter={hasCoverLetter}
+                      onCoverLetterCreated={markCoverLetterCreated}
+                    />
                     <Button
                       variant="ghost"
                       size="icon"
