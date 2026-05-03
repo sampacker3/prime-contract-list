@@ -3,6 +3,7 @@ import {
   Plus, MapPin, Building2, Trash2, Loader2,
   ChevronDown, ChevronUp, StickyNote, CheckCircle2,
   BriefcaseBusiness, CalendarDays, TrendingUp, X,
+  ArrowRight, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
+import { Link } from "react-router-dom";
 import { useApplications, type Application, type ApplicationStatus } from "@/hooks/useApplications";
 
 /* ── Config ───────────────────────────────────────────────── */
@@ -238,6 +240,26 @@ function AppCard({ app, col }: { app: Application; col: typeof COLUMNS[0] }) {
             )}
           </div>
 
+          {/* Quick links */}
+          {app.contract_id && (
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to={`/contract/${app.contract_id}`}
+                onClick={e => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors"
+              >
+                <ArrowRight className="h-3 w-3" /> View Contract
+              </Link>
+              <Link
+                to={`/saved?cover=${app.contract_id}`}
+                onClick={e => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition-colors"
+              >
+                <FileText className="h-3 w-3" /> See Cover Letter
+              </Link>
+            </div>
+          )}
+
           {/* Move to */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Move to</p>
@@ -408,8 +430,8 @@ export default function TrackerPage() {
               </div>
             </div>
 
-            {/* Desktop: 4-column kanban */}
-            <div className="hidden md:grid md:grid-cols-4 gap-5">
+            {/* Desktop: 3-column kanban, centred */}
+            <div className="hidden md:grid md:grid-cols-3 gap-5 max-w-4xl mx-auto">
               {COLUMNS.map(col => (
                 <Column key={col.status} col={col} apps={byStatus(col.status)} />
               ))}
