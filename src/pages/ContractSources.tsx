@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Search, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { supabase } from "@/lib/supabase";
 
 export default function ContractSources() {
+  const navigate = useNavigate();
   const { data: terms, isLoading, isError } = useQuery<string[]>({
     queryKey: ["contract-sources"],
     queryFn: async () => {
@@ -86,12 +88,13 @@ export default function ContractSources() {
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {grouped[letter].map(term => (
-                    <span
+                    <button
                       key={term}
-                      className="inline-flex items-center rounded-full border bg-card px-3 py-1 text-sm text-foreground hover:bg-accent transition-colors"
+                      onClick={() => navigate(`/contracts?q=${encodeURIComponent(term)}`)}
+                      className="inline-flex items-center rounded-full border bg-card px-3 py-1 text-sm text-foreground hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors cursor-pointer"
                     >
                       {term}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
