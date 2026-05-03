@@ -8,16 +8,12 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
   AlertCircle, CheckCircle2, CheckCircle, Zap, Bell,
-  FileText, Search, Star, Lock, CreditCard, Loader2,
-  ArrowRight, TrendingUp
+  FileText, Search, Star, Lock, Loader2,
+  TrendingUp
 } from 'lucide-react'
 import SEO from '@/components/SEO'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { supabase } from '@/lib/supabase'
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 const proFeatures = [
   { icon: Zap,      text: "500+ sources updated every 10 minutes" },
@@ -29,9 +25,9 @@ const proFeatures = [
 ]
 
 export default function Signup() {
-  const { signUp, signIn, signInWithGoogle, user } = useAuth()
+  const { signUp, signIn, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
-  const { priceString, priceData } = useProPrice()
+  const { priceData } = useProPrice()
 
   const [tab, setTab] = useState<'signin' | 'signup'>('signup')
   const [email, setEmail] = useState('')
@@ -40,10 +36,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
-  const [stripeLoading, setStripeLoading] = useState(false)
-  const [stripeError, setStripeError] = useState<string | null>(null)
 
-  const displayPrice = priceString ?? '£29.99/month'
   const displayAmount = priceData
     ? `${priceData.currency === 'gbp' ? '£' : '$'}${(priceData.amount / 100).toFixed(2).replace(/\.00$/, '')}`
     : '£29.99'
@@ -52,40 +45,10 @@ export default function Signup() {
   const reset = () => { setEmail(''); setPassword(''); setError(null); setLoading(false) }
   const switchTab = (t: 'signin' | 'signup') => { reset(); setTab(t) }
 
-  const goToCheckout = async (accessToken?: string) => {
-    setStripeLoading(true)
-    try {
-      let token = accessToken
-      if (!token) {
-        const { data: { session } } = await supabase.auth.getSession()
-        token = session?.access_token
-      }
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          apikey: SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          success_url: `${window.location.origin}/account?checkout=success`,
-          cancel_url: `${window.location.origin}/upgrade`,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok || !json.url) { setStripeError(json.error || 'Something went wrong.'); setStripeLoading(false); return }
-      window.location.href = json.url
-    } catch {
-      setStripeError('Something went wrong. Please try again.')
-      setStripeLoading(false)
-    }
-  }
-
   const handleGoogle = async () => {
     setError(null)
     setGoogleLoading(true)
     await signInWithGoogle()
-    // Google redirects away so no further action needed
     setGoogleLoading(false)
   }
 
@@ -97,7 +60,7 @@ export default function Signup() {
     if (tab === 'signin') {
       const { error } = await signIn(email, password)
       if (error) { setError(error.message); setLoading(false) }
-      else await goToCheckout()
+      else navigate('/upgrade')
     } else {
       if (password.length < 6) { setError('Password must be at least 6 characters'); setLoading(false); return }
       const { error } = await signUp(email, password)
@@ -192,13 +155,10 @@ export default function Signup() {
                 <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
                 <h2 className="text-xl font-heading font-bold text-foreground mb-2">Check your email</h2>
                 <p className="text-muted-foreground text-sm mb-6">
-                  We sent a confirmation link to <strong>{email}</strong>. Once verified, come back and sign in to unlock Pro.
+                  We sent a confirmation link to <strong>{email}</strong>. Click it to verify, then sign in below to unlock Pro.
                 </p>
-                <Button variant="hero" className="w-full mb-3" onClick={() => { setConfirmed(false); switchTab('signin') }}>
-                  Sign in after verifying <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to="/upgrade">See Pro features</Link>
+                <Button variant="hero" className="w-full" onClick={() => { setConfirmed(false); switchTab('signin') }}>
+                  Sign in &amp; go Pro
                 </Button>
               </div>
             ) : (
@@ -284,49 +244,10 @@ export default function Signup() {
                     <Button type="submit" variant="hero" className="w-full h-12 text-base rounded-xl" disabled={loading}>
                       {loading
                         ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{tab === 'signin' ? 'Signing in…' : 'Creating account…'}</>
-                        : tab === 'signin' ? 'Sign In & Go Pro' : 'Create Account'
+                        : tab === 'signin' ? 'Sign In & Go Pro' : 'Create Account — it\'s free'
                       }
                     </Button>
                   </form>
-
-                  {/* Pro checkout (shown after sign-in via email, or as a direct CTA) */}
-                  {tab === 'signin' && (
-                    <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
-                      <p className="text-xs text-muted-foreground mb-2 text-center">Already have an account? Sign in above and you'll go straight to Pro checkout.</p>
-                    </div>
-                  )}
-
-                  {tab === 'signup' && (
-                    <>
-                      <div className="relative my-5">
-                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-dashed" /></div>
-                        <div className="relative flex justify-center text-xs">
-                          <span className="bg-card px-2 text-muted-foreground">then unlock Pro</span>
-                        </div>
-                      </div>
-
-                      {stripeError && (
-                        <p className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2 mb-3">{stripeError}</p>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => goToCheckout()}
-                        disabled={stripeLoading || !user}
-                        className={`w-full flex items-center justify-center gap-2 rounded-xl border-2 border-primary px-4 py-3 text-sm font-semibold transition-all
-                          ${user
-                            ? 'bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground cursor-pointer'
-                            : 'opacity-40 cursor-not-allowed text-muted-foreground border-muted'
-                          }`}
-                      >
-                        {stripeLoading
-                          ? <><Loader2 className="h-4 w-4 animate-spin" /> Redirecting to checkout…</>
-                          : <><CreditCard className="h-4 w-4" /> Get Pro — {displayPrice}</>
-                        }
-                      </button>
-                      {!user && <p className="text-xs text-muted-foreground text-center mt-2">Create your account first, then unlock Pro</p>}
-                    </>
-                  )}
 
                   <div className="mt-5 pt-5 border-t flex items-center justify-between text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Secure & private</span>
@@ -340,7 +261,7 @@ export default function Signup() {
 
             {/* Mobile pricing nudge */}
             <div className="lg:hidden mt-5 rounded-xl border-2 border-primary/30 bg-primary/5 p-4 text-center">
-              <p className="text-sm font-semibold text-foreground mb-0.5">Pro Plan — {displayPrice}</p>
+              <p className="text-sm font-semibold text-foreground mb-0.5">Pro Plan — {displayAmount}/{displayInterval}</p>
               <p className="text-xs text-muted-foreground">Full access · AI apply · Instant alerts · Cancel anytime</p>
             </div>
           </div>
