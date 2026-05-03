@@ -22,6 +22,7 @@ import Account from "./pages/Account.tsx";
 import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
 import SavedJobs from "./pages/SavedJobs.tsx";
+import Tracker from "./pages/Tracker.tsx";
 import SearchPreview from "./pages/SearchPreview.tsx";
 import ContractDetail from "./pages/ContractDetail.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/saved" element={<ProtectedRoute><SavedJobs /></ProtectedRoute>} />
+            <Route path="/tracker" element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
             <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
             <Route path="/upgrade" element={<Upgrade />} />

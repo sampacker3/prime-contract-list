@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock, Sparkles, X } from "lucide-react";
+import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock, Sparkles, X, ClipboardList } from "lucide-react";
 import { useCVExists } from "@/hooks/useCVExists";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import type { Contract } from "@/types/database";
 import SEO from "@/components/SEO";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
+import { useApplications } from "@/hooks/useApplications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 
@@ -145,6 +146,9 @@ const ContractsPage = () => {
   const searchWrapperRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
+  const { addApplication, applications } = useApplications();
+  const [trackingContract, setTrackingContract] = useState<Contract | null>(null);
+  const trackedIds = new Set(applications.filter(a => a.contract_id).map(a => a.contract_id!));
   const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page, ir35Filter, dateFilter, cvSearchMode ? cvSkills : undefined);
   const raw = result?.data ?? [];
   const totalCount = result?.total ?? 0;
@@ -507,6 +511,17 @@ const ContractsPage = () => {
 
                       {/* Actions — always top-right */}
                       <div className="flex items-center gap-1 shrink-0">
+                        {user && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${trackedIds.has(contract.id) ? "text-amber-500" : "text-muted-foreground hover:text-amber-500"}`}
+                            title={trackedIds.has(contract.id) ? "Already tracking" : "Add to tracker"}
+                            onClick={(e) => { e.stopPropagation(); if (!trackedIds.has(contract.id)) setTrackingContract(contract); }}
+                          >
+                            <ClipboardList className={`h-4 w-4 ${trackedIds.has(contract.id) ? "fill-current" : ""}`} />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -615,6 +630,61 @@ const ContractsPage = () => {
       </section>
 
       <Footer />
+
+      {/* Quick-track modal */}
+      {trackingContract && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setTrackingContract(null); }}
+        >
+          <div className="relative w-full max-w-sm rounded-2xl bg-card border shadow-xl p-6">
+            <button onClick={() => setTrackingContract(null)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2 mb-1">
+              <ClipboardList className="h-4 w-4 text-amber-500" />
+              <h2 className="font-heading font-bold text-foreground">Add to Tracker</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4 truncate">{trackingContract.JobTitle}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
+                <select
+                  id="track-status"
+                  defaultValue="applied"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="applied">Applied</option>
+                  <option value="interview">Interview</option>
+                  <option value="offered">Offered</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-1">
+                <Button variant="outline" className="flex-1" size="sm" onClick={() => setTrackingContract(null)}>Cancel</Button>
+                <Button variant="hero" className="flex-1" size="sm"
+                  disabled={addApplication.isPending}
+                  onClick={async () => {
+                    const sel = (document.getElementById("track-status") as HTMLSelectElement).value;
+                    await addApplication.mutateAsync({
+                      contract_id: trackingContract.id,
+                      job_title: trackingContract.JobTitle ?? "Untitled Role",
+                      company: trackingContract.Company ?? undefined,
+                      location: trackingContract.Location ?? undefined,
+                      day_rate: trackingContract.PayRate ?? undefined,
+                      status: sel as import("@/hooks/useApplications").ApplicationStatus,
+                      applied_at: new Date().toISOString(),
+                    });
+                    setTrackingContract(null);
+                  }}
+                >
+                  {addApplication.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add to Tracker"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

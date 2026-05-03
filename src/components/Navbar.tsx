@@ -13,6 +13,7 @@ const publicLinks = [
 const protectedLinks = [
   { label: "Saved", to: "/saved", authOnly: true },
   { label: "Email Alerts", to: "/alerts", authOnly: true },
+  { label: "Tracker", to: "/tracker", authOnly: true },
   { label: "My Account", to: "/account", authOnly: false },
 ];
 
