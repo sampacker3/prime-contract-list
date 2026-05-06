@@ -320,14 +320,6 @@ export default function IR35Calculator() {
               </div>
             </div>
 
-            {/* Switch scenario nudge */}
-            <button
-              onClick={() => setMode(m => m === "inside" ? "outside" : "inside")}
-              className="w-full rounded-xl border border-dashed bg-background hover:bg-muted/40 px-4 py-3 text-sm text-muted-foreground transition-colors flex items-center justify-center gap-2"
-            >
-              <ArrowRight className="h-3.5 w-3.5" />
-              Switch to {mode === "inside" ? "Outside IR35 (Ltd)" : "Inside IR35 (Umbrella)"}
-            </button>
 
             {/* CTA */}
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-wrap items-center justify-between gap-3">
