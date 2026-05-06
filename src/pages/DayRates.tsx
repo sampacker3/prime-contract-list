@@ -323,14 +323,14 @@ export default function DayRatesPage() {
           <select
             value={category}
             onChange={e => setCategory(e.target.value)}
-            className="h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none"
           >
             {CATEGORIES.map(c => <option key={c}>{c}</option>)}
           </select>
 
           {filtered.length > 0 && (
             <span className="text-xs text-muted-foreground ml-auto">
-              Showing <span className="font-semibold text-foreground">{filtered.length}</span> skill{filtered.length !== 1 ? "s" : ""}
+              Showing <span className="font-semibold text-foreground">{filtered.length}</span> skill{filtered.length !== 1 ? "s" : ""} · last 30 days
             </span>
           )}
         </div>
@@ -373,7 +373,7 @@ export default function DayRatesPage() {
                       <SortHeader label="Max" sortKey="max" current={sort} onSort={toggleSort} />
                     </th>
                     <th className="text-left px-4 py-3">
-                      <SortHeader label="Jobs (30d)" sortKey="count" current={sort} onSort={toggleSort} />
+                      <SortHeader label="Contracts (30d)" sortKey="count" current={sort} onSort={toggleSort} />
                     </th>
                     <th className="px-4 py-3" />
                   </tr>
@@ -398,7 +398,7 @@ export default function DayRatesPage() {
                       <td className="px-4 py-3.5 text-muted-foreground">{fmt(s.min)}</td>
                       <td className="px-4 py-3.5 text-muted-foreground">{fmt(s.max)}</td>
                       <td className="px-4 py-3.5">
-                        <span className="text-muted-foreground">{s.count} job{s.count !== 1 ? "s" : ""}</span>
+                        <span className="text-muted-foreground">{s.count} contract{s.count !== 1 ? "s" : ""}</span>
                       </td>
                       <td className="px-4 py-3.5">
                         <Button
@@ -407,7 +407,7 @@ export default function DayRatesPage() {
                           className="h-7 text-xs px-3"
                           onClick={() => navigate(`/contracts?q=${encodeURIComponent(s.name)}`)}
                         >
-                          View Jobs
+                          View Contracts
                         </Button>
                       </td>
                     </tr>
@@ -429,7 +429,7 @@ export default function DayRatesPage() {
                     </div>
                     <Button size="sm" variant="hero" className="h-7 text-xs px-3 shrink-0"
                       onClick={() => navigate(`/contracts?q=${encodeURIComponent(s.name)}`)}>
-                      View Jobs
+                      View Contracts
                     </Button>
                   </div>
                   <div className="grid grid-cols-3 gap-2 mt-3 text-center">
@@ -440,7 +440,7 @@ export default function DayRatesPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2 text-right">{s.count} job{s.count !== 1 ? "s" : ""} in last 30 days</p>
+                  <p className="text-xs text-muted-foreground mt-2 text-right">{s.count} contract{s.count !== 1 ? "s" : ""} in last 30 days</p>
                 </div>
               ))}
             </div>
