@@ -125,17 +125,17 @@ function NumInput({ label, hint, prefix, suffix, value, onChange, min = 0, max, 
 }) {
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <label className="text-sm font-medium text-foreground">{label}</label>
-        {hint && <span className="text-xs text-muted-foreground shrink-0">{hint}</span>}
-      </div>
+      <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+        {label}
+        {hint && <span className="text-xs text-muted-foreground font-normal">({hint})</span>}
+      </label>
       <div className="relative flex items-center">
         {prefix && <span className="absolute left-3 text-sm text-muted-foreground pointer-events-none select-none">{prefix}</span>}
         <input
           type="number" min={min} max={max} step={step} value={value}
           onChange={e => onChange(Number(e.target.value))}
           onFocus={e => e.target.select()}
-          className={`w-full h-10 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring ${prefix ? "pl-7" : "pl-3"} ${suffix ? "pr-12" : "pr-3"}`}
+          className={`w-full h-10 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring no-spinner ${prefix ? "pl-7" : "pl-3"} ${suffix ? "pr-10" : "pr-3"}`}
         />
         {suffix && <span className="absolute right-3 text-xs text-muted-foreground pointer-events-none select-none">{suffix}</span>}
       </div>
@@ -207,7 +207,7 @@ export default function IR35Calculator() {
             <NumInput label="Day rate" prefix="£" value={dayRate} onChange={setDayRate} min={100} max={5000} step={50} />
             <div className="grid grid-cols-2 gap-3">
               <NumInput label="Days / week" suffix="days" value={daysPerWeek} onChange={setDaysPerWeek} min={1} max={7} />
-              <NumInput label="Weeks / year" hint="after holiday" suffix="wks" value={weeksPerYear} onChange={setWeeks} min={1} max={52} />
+              <NumInput label="Weeks / year" hint="after holidays" suffix="wks" value={weeksPerYear} onChange={setWeeks} min={1} max={52} />
             </div>
 
             {/* Toggle drives which extra inputs to show */}
@@ -354,6 +354,9 @@ export default function IR35Calculator() {
           0% { background-position: 200% 0; }
           100% { background-position: -200% 0; }
         }
+        .no-spinner::-webkit-outer-spin-button,
+        .no-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .no-spinner { -moz-appearance: textfield; }
       `}</style>
     </div>
   );
