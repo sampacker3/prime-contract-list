@@ -207,7 +207,7 @@ export default function IR35Calculator() {
             <NumInput label="Day rate" prefix="£" value={dayRate} onChange={setDayRate} min={100} max={5000} step={50} />
             <div className="grid grid-cols-2 gap-3">
               <NumInput label="Days / week" suffix="days" value={daysPerWeek} onChange={setDaysPerWeek} min={1} max={7} />
-              <NumInput label="Weeks / year" hint="after holidays" suffix="wks" value={weeksPerYear} onChange={setWeeks} min={1} max={52} />
+              <NumInput label="Weeks / year" suffix="wks" value={weeksPerYear} onChange={setWeeks} min={1} max={52} />
             </div>
 
             {/* Toggle drives which extra inputs to show */}
