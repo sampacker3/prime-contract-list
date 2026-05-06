@@ -9,6 +9,7 @@ import AuthModal from "@/components/AuthModal";
 const publicLinks = [
   { label: "Browse Contracts", to: "/contracts", authOnly: false },
   { label: "Day Rates", to: "/day-rates", authOnly: false },
+  { label: "IR35 Calculator", to: "/ir35-calculator", authOnly: false },
 ];
 
 const protectedLinks = [

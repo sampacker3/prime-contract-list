@@ -35,6 +35,7 @@ import About from "./pages/About.tsx";
 import Contact from "./pages/Contact.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import DayRates from "./pages/DayRates.tsx";
+import IR35Calculator from "./pages/IR35Calculator.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/day-rates" element={<DayRates />} />
+            <Route path="/ir35-calculator" element={<IR35Calculator />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
