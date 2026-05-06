@@ -8,6 +8,7 @@ import AuthModal from "@/components/AuthModal";
 
 const publicLinks = [
   { label: "Browse Contracts", to: "/contracts", authOnly: false },
+  { label: "Day Rates", to: "/day-rates", authOnly: false },
 ];
 
 const protectedLinks = [

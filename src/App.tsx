@@ -34,6 +34,7 @@ import ContractSources from "./pages/ContractSources.tsx";
 import About from "./pages/About.tsx";
 import Contact from "./pages/Contact.tsx";
 import Privacy from "./pages/Privacy.tsx";
+import DayRates from "./pages/DayRates.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -75,6 +76,7 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/day-rates" element={<DayRates />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
