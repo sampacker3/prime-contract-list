@@ -320,13 +320,16 @@ export default function DayRatesPage() {
           </div>
 
           {/* Category */}
-          <select
-            value={category}
-            onChange={e => setCategory(e.target.value)}
-            className="h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none"
-          >
-            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-          </select>
+          <div className="relative">
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              className="h-9 appearance-none rounded-lg border bg-background px-3 pr-8 text-sm focus:outline-none cursor-pointer"
+            >
+              {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          </div>
 
           {filtered.length > 0 && (
             <span className="text-xs text-muted-foreground ml-auto">
