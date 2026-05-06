@@ -91,22 +91,38 @@ type SortKey = "avg" | "min" | "max" | "count" | "name";
 
 /* ── PayRate parser ────────────────────────────────────────── */
 
+const DAILY_MIN = 150; // anything below this is almost certainly an hourly rate
+
 function parseRateRange(raw: string): { min: number; max: number } | null {
   if (!raw) return null;
   const s = raw.toLowerCase().replace(/,/g, "").replace(/\s+/g, " ");
 
   // Skip annual / salary
-  if (/annum|annual|salary|per year|pa\b|p\.a/.test(s)) return null;
+  if (/annum|annual|salary|per year|\bpa\b|p\.a/.test(s)) return null;
 
-  // Detect hourly (convert at 7.5h/day)
-  const isHourly = /per hour|\/hour|p\/h\b| ph\b|hourly/.test(s);
+  // Detect explicit hourly markers (convert at 7.5h/day)
+  const isExplicitHourly = /per hour|\/hour|\bph\b|p\/h|\/hr\b|per hr\b|hourly/.test(s);
 
-  // Extract numbers >= 50 (filter out things like "1 year", "5 days notice")
-  const raw_nums = (s.match(/\d+(?:\.\d+)?/g) ?? []).map(Number).filter(n => n >= 50 && n <= 5000);
+  // Extract candidate numbers (ignore tiny counts like "1 year", "5 days notice")
+  const raw_nums = (s.match(/\d+(?:\.\d+)?/g) ?? []).map(Number).filter(n => n >= 10 && n <= 5000);
   if (raw_nums.length === 0) return null;
 
   let nums = raw_nums;
-  if (isHourly) nums = nums.map(n => Math.round(n * 7.5));
+
+  if (isExplicitHourly) {
+    // Explicit hourly label → convert all
+    nums = nums.map(n => Math.round(n * 7.5));
+  } else {
+    // No explicit label — if every extracted number is below the daily minimum
+    // it's almost certainly an unlabelled hourly rate, so convert it
+    if (nums.every(n => n < DAILY_MIN)) {
+      nums = nums.map(n => Math.round(n * 7.5));
+    }
+  }
+
+  // Final sanity check: discard anything that still looks implausible
+  nums = nums.filter(n => n >= DAILY_MIN && n <= 5000);
+  if (nums.length === 0) return null;
 
   if (nums.length === 1) return { min: nums[0], max: nums[0] };
   return { min: Math.min(...nums), max: Math.max(...nums) };
