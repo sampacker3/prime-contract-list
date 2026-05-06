@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 const Footer = () => (
   <footer className="border-t bg-muted/30">
     <div className="container py-12">
-      <div className="grid md:grid-cols-4 gap-8">
+      <div className="grid md:grid-cols-5 gap-8">
         <div>
           <Link to="/" className="flex items-center gap-2 font-heading text-lg font-bold text-foreground">
             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-brand">
@@ -23,6 +23,13 @@ const Footer = () => (
             <Link to="/alerts" className="block hover:text-foreground transition-colors">Email Alerts</Link>
             <Link to="/account" className="block hover:text-foreground transition-colors">My Account</Link>
             <Link to="/contract-sources" className="block hover:text-foreground transition-colors">What contracts we pull</Link>
+          </div>
+        </div>
+        <div>
+          <h4 className="font-heading font-semibold text-foreground mb-3">Tools</h4>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <Link to="/day-rates" className="block hover:text-foreground transition-colors">Day Rates by Skill</Link>
+            <Link to="/ir35-calculator" className="block hover:text-foreground transition-colors">IR35 Calculator</Link>
           </div>
         </div>
         <div>
