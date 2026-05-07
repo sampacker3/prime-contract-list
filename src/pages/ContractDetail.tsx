@@ -105,22 +105,18 @@ function ApplyWithAI({ size = "default", userId, contractId, contract, hasCoverL
       : null;
 
     return (
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button
-          variant="outline"
-          size={size}
-          onClick={() => navigate(`/saved?cover=${contractId}`)}
-        >
+      <>
+        <Button variant="outline" size="sm" className="shrink-0" onClick={() => navigate(`/saved?cover=${contractId}`)}>
           <FileText className="h-3.5 w-3.5 mr-1.5" /> See Cover Letter
         </Button>
         {mailtoHref && (
-          <Button variant="hero" size={size} asChild>
+          <Button variant="hero" size="sm" className="shrink-0" asChild>
             <a href={mailtoHref}>
               <Mail className="h-3.5 w-3.5 mr-1.5" /> Send to Recruiter
             </a>
           </Button>
         )}
-      </div>
+      </>
     );
   }
 
@@ -345,7 +341,7 @@ export default function ContractDetail() {
               {isPro && (
                 <div className="flex flex-wrap items-center gap-2">
                   {contract.URL && (
-                    <Button variant="hero" size="sm" asChild>
+                    <Button variant="hero" size="sm" className="shrink-0" asChild>
                       <a href={contract.URL} target="_blank" rel="noopener noreferrer">
                         Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
                       </a>
@@ -359,7 +355,7 @@ export default function ContractDetail() {
                     hasCoverLetter={hasCoverLetter}
                     onCoverLetterCreated={markCoverLetterCreated}
                   />
-                  <Link to="/about-apply-with-ai" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1">
+                  <Link to="/about-apply-with-ai" className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                     <Info className="h-3 w-3" /> What is Apply with AI?
                   </Link>
                 </div>
@@ -367,19 +363,26 @@ export default function ContractDetail() {
 
               {/* Row 5: Recruiter contact — compact strip */}
               {isPro && contract.PosterEmail && (
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t flex-wrap">
-                  <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="text-sm text-foreground font-medium">{contract.PosterName ?? "Recruiter"}</span>
-                  <span className="text-sm text-muted-foreground">{contract.PosterEmail}</span>
-                  <div className="flex items-center gap-1.5 ml-auto">
-                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => copyEmail(contract.PosterEmail!)}>
-                      {emailCopied ? <><Check className="h-3 w-3 mr-1 text-green-500" />Copied</> : <><Copy className="h-3 w-3 mr-1" />Copy</>}
-                    </Button>
-                    <Button variant="hero" size="sm" className="h-7 text-xs" asChild>
-                      <a href={`mailto:${contract.PosterEmail}?subject=${encodeURIComponent(`Application for ${contract.JobTitle ?? "Contract Role"}`)}&body=${encodeURIComponent(`Hi ${contract.PosterName ? contract.PosterName.split(" ")[0] : "there"},\n\nI am writing to express my interest in the ${contract.JobTitle ?? "contract role"} position.\n\n`)}`}>
-                        <Mail className="h-3 w-3 mr-1" />Email Recruiter
-                      </a>
-                    </Button>
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-sm text-foreground font-medium">{contract.PosterName ?? "Recruiter"}</span>
+                        <span className="text-sm text-muted-foreground ml-2 hidden sm:inline">{contract.PosterEmail}</span>
+                        <p className="text-xs text-muted-foreground sm:hidden truncate">{contract.PosterEmail}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => copyEmail(contract.PosterEmail!)}>
+                        {emailCopied ? <><Check className="h-3 w-3 mr-1 text-green-500" />Copied</> : <><Copy className="h-3 w-3 mr-1" />Copy</>}
+                      </Button>
+                      <Button variant="hero" size="sm" className="h-7 text-xs shrink-0" asChild>
+                        <a href={`mailto:${contract.PosterEmail}?subject=${encodeURIComponent(`Application for ${contract.JobTitle ?? "Contract Role"}`)}&body=${encodeURIComponent(`Hi ${contract.PosterName ? contract.PosterName.split(" ")[0] : "there"},\n\nI am writing to express my interest in the ${contract.JobTitle ?? "contract role"} position.\n\n`)}`}>
+                          <Mail className="h-3 w-3 mr-1" />Email Recruiter
+                        </a>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
