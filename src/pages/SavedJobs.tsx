@@ -1,4 +1,4 @@
-import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X, Copy, Check, ClipboardList } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Bookmark, Loader2, Search, ChevronDown, ChevronUp, ArrowRight, FileText, X, Copy, Check, ClipboardList, Mail, Download } from "lucide-react";
 import ApplyWithAIButton from "@/components/ApplyWithAIButton";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -14,15 +14,24 @@ import { supabase } from "@/lib/supabase";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-function CoverLetterModal({ contractId, jobTitle, onClose }: { contractId: number; jobTitle: string | null; onClose: () => void }) {
+function CoverLetterModal({ contractId, jobTitle, posterEmail, posterName, onClose }: {
+  contractId: number;
+  jobTitle: string | null;
+  posterEmail?: string | null;
+  posterName?: string | null;
+  onClose: () => void;
+}) {
   const { user } = useAuth();
   const [letter, setLetter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [cvUrl, setCvUrl] = useState<string | null>(null);
 
   useState(() => {
     if (!user) return;
+
+    // Fetch cover letter
     supabase
       .from("UserAIApplyContracts")
       .select("*")
@@ -33,17 +42,20 @@ function CoverLetterModal({ contractId, jobTitle, onClose }: { contractId: numbe
       .maybeSingle()
       .then(({ data, error: err }) => {
         if (err || !data) { setError(true); setLoading(false); return; }
-        // Find the text column — try common names
         const text =
-          data.CoverLetter ??
-          data.cover_letter ??
-          data.Content ??
-          data.content ??
-          data.Letter ??
-          data.letter ??
-          null;
+          data.CoverLetter ?? data.cover_letter ??
+          data.Content ?? data.content ??
+          data.Letter ?? data.letter ?? null;
         setLetter(text);
         setLoading(false);
+      });
+
+    // Fetch signed CV download URL
+    supabase.storage
+      .from("cvs")
+      .createSignedUrl(`${user.id}/cv.pdf`, 3600)
+      .then(({ data }) => {
+        if (data?.signedUrl) setCvUrl(data.signedUrl);
       });
   });
 
@@ -91,22 +103,43 @@ function CoverLetterModal({ contractId, jobTitle, onClose }: { contractId: numbe
 
         {/* Footer */}
         {!loading && letter && (
-          <div className="px-6 py-4 border-t shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(letter);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-              className={copied ? "text-green-600 border-green-500 hover:text-green-600" : ""}
-            >
-              {copied
-                ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copied!</>
-                : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copy to clipboard</>
-              }
-            </Button>
+          <div className="px-6 py-4 border-t shrink-0 space-y-3">
+            {/* Send to recruiter — only shown when email is known */}
+            {posterEmail && (
+              <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
+                <Mail className="h-4 w-4 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">
+                    {posterName ?? "Recruiter"} · <span className="text-muted-foreground">{posterEmail}</span>
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Your email client will open with the cover letter pre-filled — attach your CV before sending.</p>
+                </div>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {posterEmail && (
+                <Button variant="hero" size="sm" asChild>
+                  <a href={`mailto:${posterEmail}?subject=${encodeURIComponent(`Application for ${jobTitle ?? "Contract Role"}`)}&body=${encodeURIComponent(letter)}`}>
+                    <Mail className="h-3.5 w-3.5 mr-1.5" /> Send to Recruiter
+                  </a>
+                </Button>
+              )}
+              {cvUrl && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={cvUrl} download="CV.pdf" target="_blank" rel="noopener noreferrer">
+                    <Download className="h-3.5 w-3.5 mr-1.5" /> Download CV
+                  </a>
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { navigator.clipboard.writeText(letter); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                className={copied ? "text-green-600 border-green-500 hover:text-green-600" : ""}
+              >
+                {copied ? <><Check className="h-3.5 w-3.5 mr-1.5" />Copied!</> : <><Copy className="h-3.5 w-3.5 mr-1.5" />Copy</>}
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -136,6 +169,7 @@ function formatPostedDate(createdAt: string): string {
 }
 
 const STATUS_STYLES: Record<ApplicationStatus, { label: string; className: string }> = {
+  saved:     { label: "Saved",     className: "bg-slate-500/10 text-slate-500 border-slate-400/20" },
   applied:   { label: "Applied",   className: "bg-primary/10 text-primary border-primary/20" },
   interview: { label: "Interview", className: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
   offered:   { label: "Offered",   className: "bg-green-500/10 text-green-600 border-green-500/20" },
@@ -478,13 +512,18 @@ export default function SavedJobsPage() {
         </div>
       )}
 
-      {coverLetterId && (
-        <CoverLetterModal
-          contractId={coverLetterId}
-          jobTitle={savedContracts.find(c => c.id === coverLetterId)?.JobTitle ?? null}
-          onClose={() => setCoverLetterId(null)}
-        />
-      )}
+      {coverLetterId && (() => {
+        const c = savedContracts.find(c => c.id === coverLetterId);
+        return (
+          <CoverLetterModal
+            contractId={coverLetterId}
+            jobTitle={c?.JobTitle ?? null}
+            posterEmail={c?.PosterEmail ?? null}
+            posterName={c?.PosterName ?? null}
+            onClose={() => setCoverLetterId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

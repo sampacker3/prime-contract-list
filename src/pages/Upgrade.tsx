@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Zap, Bell, FileText, Search, Shield, Clock,
   CheckCircle, ArrowRight, Star, ChevronDown, ChevronUp,
-  Loader2, CreditCard, Lock, TrendingUp, Users, Timer
+  Loader2, CreditCard, Lock, TrendingUp, Users, Timer, AtSign, Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,58 +62,58 @@ function useCountUp(target: number, duration = 2000) {
 
 const features = [
   {
+    icon: AtSign,
+    title: "Direct recruiter email — on every contract",
+    description: "We surface the direct email of the person who posted each role. No ATS portals, no application black holes. Email the recruiter straight from our platform — personalised, fast, and impossible to ignore.",
+    highlight: "No other board does this",
+  },
+  {
     icon: Zap,
     title: "Updated every 10 minutes",
-    description: "Our scrapers hit 500+ sources around the clock. New contracts appear on IT ContractHub before they spread anywhere else.",
+    description: "Our scrapers hit 500+ sources around the clock. New contracts appear on IT ContractHub before they spread anywhere else — giving you hours of head start over the competition.",
     highlight: "10× faster than job boards",
   },
   {
     icon: Bell,
     title: "Instant email alerts",
-    description: "Set keyword alerts and get notified the moment a matching contract is posted. Be the first CV in the inbox — every time.",
+    description: "Set keyword alerts and get notified the moment a matching contract is posted. Be the first email in the recruiter's inbox — every time.",
     highlight: "Never miss a role again",
   },
   {
+    icon: FileText,
+    title: "AI cover letter in seconds",
+    description: "Upload your CV once. Our AI reads the job spec and drafts a tailored cover letter for each role. Pair it with the recruiter's direct email and your application stands out from every portal submission.",
+    highlight: "Apply in 60 seconds",
+  },
+  {
     icon: Search,
-    title: "Full contract details",
-    description: "See the company name, location, employment type, and complete job description. No more guessing or clicking through to find the basics.",
+    title: "Full contract details, upfront",
+    description: "Company, location, IR35 status, pay rate, and the full job description — all visible before you click through. No more guessing what the role actually is.",
     highlight: "Everything, upfront",
   },
   {
-    icon: FileText,
-    title: "One-click apply",
-    description: "Direct links to the original posting so you can apply immediately — no extra steps, no lost time navigating between sites.",
-    highlight: "Apply in seconds",
-  },
-  {
-    icon: TrendingUp,
-    title: "Relevance sorting",
-    description: "Sort by newest or relevance. Our scoring surfaces the most relevant contracts for your skills right at the top.",
-    highlight: "Smart, not just fast",
-  },
-  {
     icon: Shield,
-    title: "Save & bookmark",
-    description: "Bookmark contracts you're interested in and revisit them anytime from your saved jobs. Build a shortlist with a single click.",
-    highlight: "Stay organised",
+    title: "Full application tracker",
+    description: "Track every contract from Saved → Applied → Interview → Offered. See which roles have recruiter emails available, manage your pipeline, and never lose track of where you stand.",
+    highlight: "Stay in control",
   },
 ];
 
 const testimonials = [
   {
-    quote: "I landed a £650/day Python contract within 3 days of signing up. IT ContractHub had the listing 4 hours before I saw it anywhere else.",
+    quote: "The direct recruiter email is what sold me. I emailed the hiring manager directly, skipped the ATS completely, and had a call booked the same afternoon. £650/day contract signed within a week.",
     name: "James R.",
     role: "Data Engineer · London",
     stars: 5,
   },
   {
-    quote: "The alerts are a game changer. I set up a 'DevOps' alert on Monday and had three interviews booked by Wednesday. Can't recommend it enough.",
+    quote: "I'd been applying through portals for months with no response. First week on IT ContractHub I emailed three recruiters directly using the platform. Two replied same day. This is how it should work.",
     name: "Sarah M.",
     role: "DevOps Consultant · Manchester",
     stars: 5,
   },
   {
-    quote: "Tried three other contract boards before this. None of them had listings this fresh. The 10-minute update cycle is the real deal.",
+    quote: "Fresh listings plus the recruiter's actual email address. No other board even comes close. Set up a DevOps alert on Monday, had interviews booked by Wednesday.",
     name: "Tom K.",
     role: "Solutions Architect · Edinburgh",
     stars: 5,
@@ -122,8 +122,12 @@ const testimonials = [
 
 const faqs = [
   {
-    q: "How is IT ContractHub Pro different from free job boards?",
-    a: "Most job boards update once or twice a day and show you what everyone else is already seeing. IT ContractHub scrapes 500+ sources every 10 minutes, so you see roles hours before the competition — and you get the full details (company, location, description) without having to click through.",
+    q: "How is IT ContractHub Pro different from every other job board?",
+    a: "Two things no other platform offers: we update every 10 minutes from 500+ sources, and we give you the direct email of the recruiter behind every role. No ATS portals, no application black holes — you email the decision maker directly, with an AI-written cover letter tailored to the spec.",
+  },
+  {
+    q: "What do you mean by 'direct recruiter email'?",
+    a: "Every contract on our platform includes the email of the person or agency that posted it. Instead of submitting into a faceless recruitment portal, you can contact the recruiter directly — before anyone else, with a personalised message.",
   },
   {
     q: "Can I cancel at any time?",
@@ -317,16 +321,16 @@ export default function UpgradePage() {
           </div>
 
           <h1 className="text-5xl md:text-7xl font-heading font-bold leading-[1.05] tracking-tight mb-6">
-            Win contracts{" "}
+            Skip the queue.{" "}
             <span className="relative inline-block">
-              <span className="relative z-10 text-primary">before</span>
+              <span className="relative z-10 text-primary">Email the recruiter</span>
               <span className="absolute inset-x-0 bottom-1 h-3 bg-primary/20 rounded-sm -z-0 blur-sm" />
             </span>
-            {" "}the competition even sees them
+            {" "}directly.
           </h1>
 
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-10">
-            IT ContractHub Pro scans 500+ sources every 10 minutes. While other contractors are browsing stale job boards, you're already applying.
+            IT ContractHub gives you the direct email of every recruiter behind every contract — no ATS portals, no application black holes. Just you, the role, and the person hiring.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
@@ -371,16 +375,16 @@ export default function UpgradePage() {
         <div className="container max-w-3xl text-center">
           <Badge variant="secondary" className="mb-4 text-xs uppercase tracking-widest font-semibold">The reality</Badge>
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6 leading-snug">
-            By the time a contract appears on a job board,{" "}
-            <span className="text-destructive">50+ contractors</span>{" "}have already applied
+            Your application is disappearing into{" "}
+            <span className="text-destructive">a portal black hole</span>
           </h2>
           <p className="text-muted-foreground text-lg leading-relaxed mb-12">
-            Traditional job boards aggregate listings daily — sometimes hourly. That lag is killing your chances. The best contracts get filled before most people even see them.
+            ATS systems filter out most CVs before a human ever sees them. Job boards are stale by 12+ hours. The best contracts are filled before you even know they exist. IT ContractHub fixes all three.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
             {[
               { icon: Clock, label: "Typical job board delay", value: "12–24 hrs", color: "text-destructive", bg: "bg-destructive/10" },
-              { icon: Users, label: "Avg. applications per role", value: "80+", color: "text-orange-500", bg: "bg-orange-500/10" },
+              { icon: Mail, label: "Contracts with direct recruiter email", value: "Every one", color: "text-primary", bg: "bg-primary/10" },
               { icon: Zap, label: "IT ContractHub update cycle", value: "10 mins", color: "text-primary", bg: "bg-primary/10" },
             ].map(({ icon: Icon, label, value, color, bg }) => (
               <div key={label} className="rounded-xl border bg-card p-5">
@@ -412,7 +416,7 @@ export default function UpgradePage() {
       </section>
 
       {/* ── Stats bar ────────────────────────────────────── */}
-      <section className="bg-[hsl(217,91%,50%)] py-20">
+      <section className="bg-gradient-brand py-20">
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <StatItem target={12400} suffix="+" label="Active contracts" />
@@ -478,12 +482,12 @@ export default function UpgradePage() {
 
               <ul className="space-y-3 mb-8">
                 {[
-                  "Full contract details — company, location, description",
+                  "Direct recruiter email on every contract",
+                  "AI cover letter tailored to each role",
                   "500+ sources updated every 10 minutes",
                   "Instant email alerts for your keywords",
-                  "One-click apply to original job posting",
-                  "Save & bookmark contracts",
-                  "Relevance sorting & advanced search",
+                  "Full contract details — company, location, IR35, pay rate",
+                  "Application tracker — Saved → Applied → Interview → Offered",
                   "Priority access to newly posted roles",
                   "Cancel anytime, no lock-in",
                 ].map((item) => (

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark, FileText } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark, FileText, ChevronRight, Mail, Copy, Check } from "lucide-react";
 import ApplyWithAIButton from "@/components/ApplyWithAIButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +9,58 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AuthModal from "@/components/AuthModal";
 import { supabase } from "@/lib/supabase";
+import { extractSkills } from "@/lib/skills";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
 import type { Contract } from "@/types/database";
 import { toast } from "sonner";
+
+// Strip noise words to get meaningful keywords from a job title
+const NOISE = new Set([
+  "senior", "junior", "lead", "principal", "staff", "associate", "mid", "contract",
+  "interim", "remote", "hybrid", "onsite", "uk", "and", "or", "the", "a", "an",
+  "with", "in", "for", "of", "to", "at", "role", "position", "opportunity",
+]);
+
+function titleKeywords(title: string): string[] {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !NOISE.has(w))
+    .slice(0, 3);
+}
+
+function useSimilarContracts(contract: Contract | undefined) {
+  return useQuery({
+    queryKey: ["similar", contract?.id],
+    enabled: !!contract?.JobTitle,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const keywords = titleKeywords(contract!.JobTitle ?? "");
+      if (keywords.length === 0) return [];
+
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 30);
+
+      const orFilters = keywords
+        .map((k) => `JobTitle.ilike.%${k}%`)
+        .join(",");
+
+      const { data, error } = await supabase
+        .from("LinkedinScrapeResults")
+        .select("id, JobTitle, Location, PayRate, IR35Status, created_at")
+        .or(orFilters)
+        .gte("created_at", cutoff.toISOString())
+        .neq("id", contract!.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return (data ?? []) as Pick<Contract, "id" | "JobTitle" | "Location" | "PayRate" | "IR35Status" | "created_at">[];
+    },
+  });
+}
 
 function useContract(id: number) {
   return useQuery({
@@ -52,14 +100,27 @@ function ApplyWithAI({ size = "default", userId, contractId, contract, hasCoverL
   const navigate = useNavigate();
 
   if (hasCoverLetter) {
+    const mailtoHref = contract?.PosterEmail
+      ? `mailto:${contract.PosterEmail}?subject=${encodeURIComponent(`Application for ${contract.JobTitle ?? "Contract Role"}`)}&body=${encodeURIComponent(`Hi ${contract.PosterName ? contract.PosterName.split(" ")[0] : "there"},\n\nPlease find my application for the ${contract.JobTitle ?? "contract role"} position below.\n\n[Paste your cover letter here]\n\nI look forward to hearing from you.\n\nKind regards`)}`
+      : null;
+
     return (
-      <Button
-        variant="outline"
-        size={size}
-        onClick={() => navigate(`/saved?cover=${contractId}`)}
-      >
-        <FileText className="h-3.5 w-3.5 mr-1.5" /> See Cover Letter
-      </Button>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          size={size}
+          onClick={() => navigate(`/saved?cover=${contractId}`)}
+        >
+          <FileText className="h-3.5 w-3.5 mr-1.5" /> See Cover Letter
+        </Button>
+        {mailtoHref && (
+          <Button variant="hero" size={size} asChild>
+            <a href={mailtoHref}>
+              <Mail className="h-3.5 w-3.5 mr-1.5" /> Send to Recruiter
+            </a>
+          </Button>
+        )}
+      </div>
     );
   }
 
@@ -69,22 +130,31 @@ function ApplyWithAI({ size = "default", userId, contractId, contract, hasCoverL
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ user_id: userId, contract_id: String(contractId) }),
+        body: new URLSearchParams({
+          user_id: userId,
+          contract_id: String(contractId),
+          ...(contract?.PosterName ? { poster_name: contract.PosterName } : {}),
+          ...(contract?.PosterEmail ? { poster_email: contract.PosterEmail } : {}),
+        }),
       }),
       supabase
         .from("UserSavedJobs")
         .upsert({ UserID: userId, JobID: contractId }, { onConflict: "UserID,JobID", ignoreDuplicates: true }),
     ]);
 
-    // Auto-add to Application Tracker if not already tracked
+    // Upsert into tracker — upgrade 'saved' → 'applied', or insert fresh
     const { data: existing } = await supabase
       .from("applications")
-      .select("id")
+      .select("id, status")
       .eq("user_id", userId)
       .eq("contract_id", contractId)
       .maybeSingle();
 
-    if (!existing) {
+    if (existing) {
+      if (existing.status === "saved") {
+        await supabase.from("applications").update({ status: "applied", applied_at: new Date().toISOString() }).eq("id", existing.id);
+      }
+    } else {
       await supabase.from("applications").insert({
         user_id: userId,
         contract_id: contractId,
@@ -95,7 +165,6 @@ function ApplyWithAI({ size = "default", userId, contractId, contract, hasCoverL
         status: "applied",
         applied_at: new Date().toISOString(),
       });
-      toast.success("Added to your Application Tracker", { description: contract?.JobTitle ?? undefined });
     }
 
     onCoverLetterCreated();
@@ -117,9 +186,17 @@ export default function ContractDetail() {
   const { user, isPro } = useAuth();
   const { savedJobIds, toggleSave } = useSavedJobs();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  const copyEmail = (email: string) => {
+    navigator.clipboard.writeText(email);
+    setEmailCopied(true);
+    setTimeout(() => setEmailCopied(false), 2000);
+  };
 
   const queryClient = useQueryClient();
   const { data: contract, isLoading, isError } = useContract(Number(id));
+  const { data: similarContracts = [] } = useSimilarContracts(contract);
   const isToday = contract?.created_at
     ? new Date(contract.created_at) >= new Date(new Date().setHours(0, 0, 0, 0))
     : false;
@@ -146,6 +223,7 @@ export default function ContractDetail() {
       next.add(Number(id));
       return next;
     });
+    navigate('/tracker');
   };
 
   const LockedCTA = () => (
@@ -204,101 +282,108 @@ export default function ContractDetail() {
         {contract && (
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
             {/* Header */}
-            <div className="p-6 border-b">
-              <div className="flex flex-col gap-4">
-                {/* Title + pay rate + badge */}
-                <div className="flex items-start gap-2 flex-wrap">
-                  <h1 className="font-heading font-bold text-2xl text-foreground leading-snug">
-                    {contract.JobTitle ?? "Contract Role"}
-                  </h1>
+            <div className="p-5 md:p-6 border-b">
+
+              {/* Row 1: Title + bookmark + badges */}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h1 className="font-heading font-bold text-xl md:text-2xl text-foreground leading-snug flex-1">
+                  {contract.JobTitle ?? "Contract Role"}
+                </h1>
+                <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                  {isToday && <Badge className="bg-green-500 text-white border-0 text-[11px]">New</Badge>}
                   {isPro && contract.PayRate && (
-                    <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400 shrink-0 mt-1">
+                    <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
                       {contract.PayRate}
                     </span>
                   )}
-                  {isToday && (
-                    <Badge className="bg-green-500 text-white border-0 shrink-0 mt-1">Posted Today</Badge>
-                  )}
-                </div>
-
-                {/* Meta info */}
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  {isPro ? (
-                    <>
-                      {contract.Company && (
-                        <span className="flex items-center gap-1.5">
-                          <Building2 className="h-4 w-4 shrink-0" />{contract.Company}
-                        </span>
-                      )}
-                      {contract.Location && (
-                        <span className="flex items-center gap-1.5">
-                          <MapPin className="h-4 w-4 shrink-0" />{contract.Location}
-                        </span>
-                      )}
-                      {contract.EmploymentType && (
-                        <span className="flex items-center gap-1.5">
-                          <Clock className="h-4 w-4 shrink-0" />{contract.EmploymentType}
-                        </span>
-                      )}
-                      {contract.WorkType && (
-                        <span className="flex items-center gap-1.5">
-                          <Briefcase className="h-4 w-4 shrink-0" />{contract.WorkType}
-                        </span>
-                      )}
-                      {contract.IR35Status && (
-                        <span className="flex items-center gap-1.5">
-                          {contract.IR35Status}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="blur-sm select-none opacity-50">████████ Ltd · London, UK · Contract</span>
-                  )}
-                  {contract.created_at && (
-                    <span className="inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {formatPostedDate(contract.created_at)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Action buttons */}
-                {isPro && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {contract.URL && (
-                      <Button variant="hero" size="sm" asChild>
-                        <a href={contract.URL} target="_blank" rel="noopener noreferrer">
-                          Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                        </a>
-                      </Button>
-                    )}
-                    <ApplyWithAI
-                      size="sm"
-                      userId={user.id}
-                      contractId={contract.id}
-                      contract={contract}
-                      hasCoverLetter={hasCoverLetter}
-                      onCoverLetterCreated={markCoverLetterCreated}
-                    />
+                  {isPro && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={savedJobIds.has(contract.id) ? "text-primary" : "text-muted-foreground hover:text-primary"}
+                      className={`h-8 w-8 ${savedJobIds.has(contract.id) ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
                       onClick={() => toggleSave.mutate(contract.id)}
                       title={savedJobIds.has(contract.id) ? "Remove from saved" : "Save contract"}
                     >
                       <Bookmark className={`h-4 w-4 ${savedJobIds.has(contract.id) ? "fill-current" : ""}`} />
                     </Button>
-                    <Link
-                      to="/about-apply-with-ai"
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Info className="h-3 w-3" />
-                      What is Apply with AI?
-                    </Link>
-                  </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Row 2: Meta — company, location, IR35, posted */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground mb-3">
+                {isPro ? (
+                  <>
+                    {contract.Company && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 shrink-0" />{contract.Company}</span>}
+                    {contract.Location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 shrink-0" />{contract.Location}</span>}
+                    {contract.IR35Status && <span>{contract.IR35Status}</span>}
+                    {contract.WorkType && <span>{contract.WorkType}</span>}
+                  </>
+                ) : (
+                  <span className="blur-sm select-none opacity-50">████████ Ltd · London, UK · Contract</span>
+                )}
+                {contract.created_at && (
+                  <span className="text-xs text-muted-foreground/70">{formatPostedDate(contract.created_at)}</span>
                 )}
               </div>
+
+              {/* Row 3: Skill chips */}
+              {(() => {
+                const skills = extractSkills(contract.JobTitle, contract.Description);
+                return skills.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {skills.map((skill) => (
+                      <span key={skill} className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary/80">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Row 4: Actions */}
+              {isPro && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {contract.URL && (
+                    <Button variant="hero" size="sm" asChild>
+                      <a href={contract.URL} target="_blank" rel="noopener noreferrer">
+                        Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                      </a>
+                    </Button>
+                  )}
+                  <ApplyWithAI
+                    size="sm"
+                    userId={user.id}
+                    contractId={contract.id}
+                    contract={contract}
+                    hasCoverLetter={hasCoverLetter}
+                    onCoverLetterCreated={markCoverLetterCreated}
+                  />
+                  <Link to="/about-apply-with-ai" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1">
+                    <Info className="h-3 w-3" /> What is Apply with AI?
+                  </Link>
+                </div>
+              )}
+
+              {/* Row 5: Recruiter contact — compact strip */}
+              {isPro && contract.PosterEmail && (
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t flex-wrap">
+                  <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="text-sm text-foreground font-medium">{contract.PosterName ?? "Recruiter"}</span>
+                  <span className="text-sm text-muted-foreground">{contract.PosterEmail}</span>
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => copyEmail(contract.PosterEmail!)}>
+                      {emailCopied ? <><Check className="h-3 w-3 mr-1 text-green-500" />Copied</> : <><Copy className="h-3 w-3 mr-1" />Copy</>}
+                    </Button>
+                    <Button variant="hero" size="sm" className="h-7 text-xs" asChild>
+                      <a href={`mailto:${contract.PosterEmail}?subject=${encodeURIComponent(`Application for ${contract.JobTitle ?? "Contract Role"}`)}&body=${encodeURIComponent(`Hi ${contract.PosterName ? contract.PosterName.split(" ")[0] : "there"},\n\nI am writing to express my interest in the ${contract.JobTitle ?? "contract role"} position.\n\n`)}`}>
+                        <Mail className="h-3 w-3 mr-1" />Email Recruiter
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
             </div>
 
             {/* Body */}
@@ -340,6 +425,66 @@ export default function ContractDetail() {
                 </Button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Similar contracts */}
+        {similarContracts.length > 0 && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-heading font-semibold text-foreground text-base">
+                Similar roles posted this month
+                <span className="ml-2 text-xs font-normal text-muted-foreground">({similarContracts.length})</span>
+              </h2>
+              <Link
+                to="/contracts"
+                className="text-xs text-primary hover:underline flex items-center gap-0.5"
+              >
+                Browse all <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="space-y-2">
+              {similarContracts.map((s) => {
+                const postedToday =
+                  s.created_at
+                    ? new Date(s.created_at) >= new Date(new Date().setHours(0, 0, 0, 0))
+                    : false;
+                return (
+                  <Link
+                    key={s.id}
+                    to={`/contract/${s.id}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 hover:border-primary/30 hover:shadow-brand transition-all group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                        {s.JobTitle ?? "Contract Role"}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                        {s.Location && (
+                          <span className="flex items-center gap-0.5 truncate max-w-[140px]">
+                            <MapPin className="h-3 w-3 shrink-0" />{s.Location}
+                          </span>
+                        )}
+                        {s.IR35Status && <span>{s.IR35Status}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {s.PayRate && (
+                        <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
+                          {s.PayRate}
+                        </span>
+                      )}
+                      {postedToday && (
+                        <span className="inline-flex items-center rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                          New
+                        </span>
+                      )}
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
       </main>

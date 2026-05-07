@@ -24,7 +24,8 @@ const COLUMNS: {
   badge: string;
   dot: string;
 }[] = [
-  { status: "applied",   label: "Applied",   colour: "border-primary/30 bg-primary/5",      badge: "bg-primary/10 text-primary",    dot: "bg-primary" },
+  { status: "saved",     label: "Saved",      colour: "border-slate-400/30 bg-slate-500/5",  badge: "bg-slate-500/10 text-slate-500", dot: "bg-slate-400" },
+  { status: "applied",   label: "Applied",    colour: "border-primary/30 bg-primary/5",      badge: "bg-primary/10 text-primary",    dot: "bg-primary" },
   { status: "interview", label: "Interview",  colour: "border-amber-500/30 bg-amber-500/5",  badge: "bg-amber-500/10 text-amber-500", dot: "bg-amber-500" },
   { status: "offered",   label: "Offered",    colour: "border-green-500/30 bg-green-500/5",  badge: "bg-green-500/10 text-green-600", dot: "bg-green-500" },
 ];

@@ -14,6 +14,7 @@ import SEO from "@/components/SEO";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { extractSkills as _extractSkills } from "@/lib/skills";
 
 const PAGE_SIZE = 25;
 
@@ -87,6 +88,8 @@ function scoreCVRelevance(contract: Contract, skills: string[]): number {
   const haystack = `${contract.JobTitle ?? ""} ${contract.Description ?? ""}`.toLowerCase();
   return skills.filter(s => haystack.includes(s.toLowerCase())).length;
 }
+
+const extractSkills = (contract: Contract, max = 8) => _extractSkills(contract.JobTitle, contract.Description, max);
 
 // PostedDate is a date-only field (no time). Use created_at for the full timestamp.
 function isToday(createdAt: string): boolean {
@@ -503,6 +506,23 @@ const ContractsPage = () => {
                           )}
                           <span className="text-muted-foreground/60">{formatPostedDate(contract.created_at)}</span>
                         </div>
+
+                        {/* Skill chips */}
+                        {(() => {
+                          const skills = extractSkills(contract);
+                          return skills.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {skills.map((skill) => (
+                                <span
+                                  key={skill}
+                                  className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary/80 leading-none"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
 
                       {/* Actions — always top-right */}

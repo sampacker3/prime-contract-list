@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type ApplicationStatus = "applied" | "interview" | "offered";
+export type ApplicationStatus = "saved" | "applied" | "interview" | "offered";
 
 export interface Application {
   id: string;

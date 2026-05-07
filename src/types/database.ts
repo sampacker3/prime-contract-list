@@ -17,6 +17,8 @@ export type Database = {
           LinkedInJobID: string | null
           IR35Status: string | null
           PayRate: string | null
+          PosterEmail: string | null
+          PosterName: string | null
         }
         Insert: Omit<Database['public']['Tables']['LinkedinScrapeResults']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['LinkedinScrapeResults']['Insert']>
@@ -49,6 +51,21 @@ export type Database = {
         }
         Insert: Omit<Database['public']['Tables']['alerts']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['alerts']['Insert']>
+      }
+      SuggestedSearchTerms: {
+        Row: {
+          id: number
+          SearchTerm: string
+          UID: string | null
+          AccountName: string | null
+          created_at: string
+        }
+        Insert: {
+          SearchTerm: string
+          UID?: string | null
+          AccountName?: string | null
+        }
+        Update: never
       }
       UserSavedJobs: {
         Row: {

@@ -51,19 +51,55 @@ export function useSavedJobs() {
       if (!user) throw new Error('Not authenticated')
 
       if (savedJobIds.has(jobId)) {
-        // Unsave — delete the row
+        // Unsave — remove from UserSavedJobs
         const { error } = await supabase
           .from('UserSavedJobs')
           .delete()
           .eq('UserID', user.id)
           .eq('JobID', jobId)
         if (error) throw error
+
+        // Remove from tracker only if still in 'saved' stage (not progressed)
+        await supabase
+          .from('applications')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('contract_id', jobId)
+          .eq('status', 'saved')
       } else {
-        // Save — insert a row
+        // Save — insert into UserSavedJobs
         const { error } = await supabase
           .from('UserSavedJobs')
           .insert({ UserID: user.id, JobID: jobId })
         if (error) throw error
+
+        // Fetch contract details for the tracker entry
+        const { data: contract } = await supabase
+          .from('LinkedinScrapeResults')
+          .select('JobTitle, Company, Location, PayRate')
+          .eq('id', jobId)
+          .single()
+
+        // Add to tracker as 'saved' — ignore if already tracked at a later stage
+        const { data: existing } = await supabase
+          .from('applications')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('contract_id', jobId)
+          .maybeSingle()
+
+        if (!existing) {
+          await supabase.from('applications').insert({
+            user_id: user.id,
+            contract_id: jobId,
+            job_title: contract?.JobTitle ?? 'Contract Role',
+            company: contract?.Company ?? null,
+            location: contract?.Location ?? null,
+            day_rate: contract?.PayRate ?? null,
+            status: 'saved',
+            applied_at: new Date().toISOString(),
+          })
+        }
       }
     },
     onSuccess: () => {

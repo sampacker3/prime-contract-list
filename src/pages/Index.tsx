@@ -8,7 +8,7 @@ import { useProPrice } from "@/hooks/useProPrice";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   Search, ArrowRight, Bell, FileText, Send,
-  Zap, Shield, TrendingUp,
+  Zap, Shield, TrendingUp, Mail, AtSign,
   Star, CheckCircle, ChevronDown, ChevronUp, Lock, CreditCard, Sparkles, X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -81,33 +81,32 @@ function useMarqueeContracts() {
 /* ─── Static data ───────────────────────────────────────────────── */
 
 const steps = [
-  { icon: Search, title: "We search hundreds of businesses and recruiters for contracts", description: "We scrape contracts from hundreds of job boards and company sites so you don't have to." },
-  { icon: Bell, title: "We notify you as soon as a relevant contract is posted", description: "No more hunting and missing opportunities because you are too late." },
-  { icon: FileText, title: "We draft a cover letter based on your CV and the selected contract", description: "Create tailored applications every time, saving you time and improving your application." },
-  { icon: Send, title: "You apply to your ideal contract", description: "That hard work has been done, all you need to do is apply with your custom cover letter to your contract early thanks to IT ContractHub." },
+  { icon: Search, title: "We find contracts the moment they're posted", description: "We scrape 500+ sources every 10 minutes — job boards, company sites, and recruiters — so you see roles hours before anyone else." },
+  { icon: Bell, title: "You get alerted instantly", description: "Set keyword alerts and get notified the moment a matching contract appears. Be first, every time." },
+  { icon: FileText, title: "We write a tailored cover letter from your CV", description: "Our AI reads the job description and your CV, and drafts a cover letter matched to the role in seconds." },
+  { icon: Mail, title: "You email the recruiter directly — no portals, no black holes", description: "We surface the direct email of the person who posted the role. Skip the ATS queue and land straight in the recruiter's inbox." },
 ];
 
 const features = [
+  { icon: AtSign, title: "Direct recruiter email on every contract", description: "No more sending into the void. We surface the direct email of the person who posted each role — skip the ATS queue and land straight in the recruiter's inbox.", highlight: "No other board does this" },
   { icon: Zap, title: "Updated every 10 minutes", description: "Our scrapers hit 500+ sources around the clock. New contracts appear on IT ContractHub before they spread anywhere else.", highlight: "10× faster than job boards" },
   { icon: Bell, title: "Instant email alerts", description: "Set keyword alerts and get notified the moment a matching contract is posted. Be the first CV in the inbox — every time.", highlight: "Never miss a role" },
-  { icon: Search, title: "Full contract details", description: "See the company name, location, employment type, and complete job description. No more guessing what the role actually is.", highlight: "Everything, upfront" },
-  { icon: FileText, title: "One-click apply", description: "Direct links to the original posting so you can apply immediately — no extra steps, no lost time navigating between sites.", highlight: "Apply in seconds" },
-  { icon: TrendingUp, title: "Relevance sorting", description: "Sort by newest or relevance. Our scoring surfaces the most relevant contracts for your skills right at the top.", highlight: "Smart, not just fast" },
-  { icon: Shield, title: "Save & bookmark", description: "Bookmark contracts you're interested in and revisit them anytime from your saved jobs. Build a shortlist with one click.", highlight: "Stay organised" },
+  { icon: FileText, title: "AI cover letter in seconds", description: "Our AI reads the job spec and your uploaded CV, then drafts a tailored cover letter matched to the role. Pair it with the recruiter's direct email and you're unstoppable.", highlight: "Apply in 60 seconds" },
+  { icon: TrendingUp, title: "Full contract details, upfront", description: "Company, location, employment type, IR35 status, and the full job description — all visible before you click. No guessing, no wasted clicks.", highlight: "Everything, upfront" },
+  { icon: Shield, title: "Track every application", description: "Bookmark, apply, and track your pipeline from Saved → Applied → Interview → Offered. Never lose track of where you stand.", highlight: "Stay in control" },
 ];
 
 const testimonials = [
-  { quote: "I landed a £650/day Python contract within 3 days of signing up. IT ContractHub had the listing 4 hours before I saw it anywhere else.", name: "James R.", role: "Data Engineer · London", stars: 5 },
-  { quote: "The alerts are a game changer. I set up a 'DevOps' alert on Monday and had three interviews booked by Wednesday. Can't recommend it enough.", name: "Sarah M.", role: "DevOps Consultant · Manchester", stars: 5 },
-  { quote: "Tried three other contract boards before this. None of them had listings this fresh. The 10-minute update cycle is the real deal.", name: "Tom K.", role: "Solutions Architect · Edinburgh", stars: 5 },
+  { quote: "The direct recruiter email is a game changer. I emailed the hiring manager directly, bypassed the ATS completely, and had a call booked the same afternoon.", name: "James R.", role: "Data Engineer · London", stars: 5 },
+  { quote: "Every other board sent my application into a portal black hole. IT ContractHub gave me the recruiter's actual email — I landed a £650/day contract within a week.", name: "Sarah M.", role: "DevOps Consultant · Manchester", stars: 5 },
+  { quote: "Tried three other contract boards before this. None of them had listings this fresh — or the recruiter's email. The 10-minute update cycle plus direct contact is unbeatable.", name: "Tom K.", role: "Solutions Architect · Edinburgh", stars: 5 },
 ];
 
 const faqs = [
-  { q: "How is IT ContractHub different from free job boards?", a: "Most job boards update once or twice a day. IT ContractHub scrapes 500+ sources every 10 minutes, so you see roles hours before the competition — and you get full details without clicking through." },
-  { q: "Who is IT ContractHub Pro for?", a: "Any UK IT contractor who's tired of applying late and missing roles. Whether you're in Data, DevOps, Cloud, Development, or any other tech discipline — if you're contracting, you need to be first." },
-  { q: "Can I cancel at any time?", a: "Absolutely. Cancel your Pro subscription anytime from the billing portal in your account settings. No questions asked, no hidden fees." },
-  { q: "How quickly will I get access after subscribing?", a: "Instantly. As soon as your payment is confirmed, your account is upgraded to Pro and all contract details are unlocked." },
-  { q: "Is there a free plan?", a: "Yes — you can browse contract titles and dates for free. Upgrade to Pro to unlock full company details, descriptions, alerts, and one-click apply." },
+  { q: "How is IT ContractHub different from every other job board?", a: "Two things no one else does: we update every 10 minutes from 500+ sources (so you see roles hours before the competition), and we give you the direct email of the recruiter who posted each role. No ATS portals, no black holes — straight to the decision maker." },
+  { q: "What do you mean by 'direct recruiter email'?", a: "Every contract on our platform includes the email address of the person or agency that posted it. Instead of applying through a faceless recruitment portal, you can email the recruiter directly — personalised, fast, and straight to their inbox." },
+  { q: "Who is IT ContractHub Pro for?", a: "Any UK IT contractor who's tired of applying late, getting lost in ATS queues, and missing roles. Whether you're in Data, DevOps, Cloud, or Development — direct contact with recruiters changes everything." },
+  { q: "Is there a free plan?", a: "Yes — browse contract titles and dates for free. Upgrade to Pro to unlock full details, recruiter emails, AI cover letters, email alerts, and the application tracker." },
 ];
 
 const POPULAR_SEARCHES = ["Python", "AWS", "React", "DevOps", "Data Engineer", "Azure", "Java", "MLOps"];
@@ -238,7 +237,7 @@ function ContractMarquee() {
 function StatBar() {
   const c1 = useCountUp(12400); const c2 = useCountUp(500); const c3 = useCountUp(8200); const c4 = useCountUp(10);
   return (
-    <section className="bg-[hsl(217,91%,50%)] py-14">
+    <section className="bg-gradient-brand py-14">
       <div className="container grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
         {[
           { val: c1, suffix: "+", label: "Active Contracts" },
@@ -250,7 +249,7 @@ function StatBar() {
             <p className="text-4xl md:text-5xl font-heading font-bold text-white">
               <span ref={val.ref}>{val.count.toLocaleString("en-GB")}</span>{suffix}
             </p>
-            <p className="mt-2 text-sm text-white/70 font-medium">{label}</p>
+            <p className="mt-2 text-sm text-white/80 font-medium">{label}</p>
           </div>
         ))}
       </div>
@@ -379,7 +378,19 @@ const Index = () => {
                 contract now
               </h1>
               <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
-                We pull contract opportunities from hundreds of websites every 10 mins ready for you to apply early with no hassle.
+                The{" "}
+                <span className="relative inline-block text-foreground font-semibold">
+                  one
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 100 5"
+                    preserveAspectRatio="none"
+                    className="absolute top-full left-0 w-full h-[4px] -mt-1"
+                  >
+                    <path d="M0,4 Q50,1 100,3" stroke="#3b82f6" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                  </svg>
+                </span>
+                {" "}site you need as an IT contractor. Find contracts, get the recruiter's direct email, apply in minutes.
               </p>
               <p className="mt-5 text-2xl md:text-3xl font-heading font-bold text-foreground" ref={heroCountUp.ref}>
                 Over{" "}
