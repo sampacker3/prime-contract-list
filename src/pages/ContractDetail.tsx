@@ -106,11 +106,11 @@ function ApplyWithAI({ size = "default", userId, contractId, contract, hasCoverL
 
     return (
       <>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => navigate(`/saved?cover=${contractId}`)}>
+        <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate(`/saved?cover=${contractId}`)}>
           <FileText className="h-3.5 w-3.5 mr-1.5" /> See Cover Letter
         </Button>
         {mailtoHref && (
-          <Button variant="hero" size="sm" className="shrink-0" asChild>
+          <Button variant="hero" size="sm" className="w-full sm:w-auto" asChild>
             <a href={mailtoHref}>
               <Mail className="h-3.5 w-3.5 mr-1.5" /> Send to Recruiter
             </a>
@@ -280,30 +280,32 @@ export default function ContractDetail() {
             {/* Header */}
             <div className="p-5 md:p-6 border-b">
 
-              {/* Row 1: Title + bookmark + badges */}
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <h1 className="font-heading font-bold text-xl md:text-2xl text-foreground leading-snug flex-1">
+              {/* Row 1: Title full-width + bookmark pinned top-right */}
+              <div className="flex items-start gap-2 mb-2">
+                <h1 className="font-heading font-bold text-xl md:text-2xl text-foreground leading-snug flex-1 min-w-0">
                   {contract.JobTitle ?? "Contract Role"}
                 </h1>
-                <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                  {isToday && <Badge className="bg-green-500 text-white border-0 text-[11px]">New</Badge>}
-                  {isPro && contract.PayRate && (
-                    <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
-                      {contract.PayRate}
-                    </span>
-                  )}
-                  {isPro && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`h-8 w-8 ${savedJobIds.has(contract.id) ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
-                      onClick={() => toggleSave.mutate(contract.id)}
-                      title={savedJobIds.has(contract.id) ? "Remove from saved" : "Save contract"}
-                    >
-                      <Bookmark className={`h-4 w-4 ${savedJobIds.has(contract.id) ? "fill-current" : ""}`} />
-                    </Button>
-                  )}
-                </div>
+                {isPro && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-8 w-8 shrink-0 mt-0.5 ${savedJobIds.has(contract.id) ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+                    onClick={() => toggleSave.mutate(contract.id)}
+                    title={savedJobIds.has(contract.id) ? "Remove from saved" : "Save contract"}
+                  >
+                    <Bookmark className={`h-4 w-4 ${savedJobIds.has(contract.id) ? "fill-current" : ""}`} />
+                  </Button>
+                )}
+              </div>
+
+              {/* Badges row — sits below title */}
+              <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                {isToday && <Badge className="bg-green-500 text-white border-0 text-[11px]">New</Badge>}
+                {isPro && contract.PayRate && (
+                  <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
+                    {contract.PayRate}
+                  </span>
+                )}
               </div>
 
               {/* Row 2: Meta — company, location, IR35, posted */}
@@ -339,9 +341,9 @@ export default function ContractDetail() {
 
               {/* Row 4: Actions */}
               {isPro && (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
                   {contract.URL && (
-                    <Button variant="hero" size="sm" className="shrink-0" asChild>
+                    <Button variant="hero" size="sm" className="w-full sm:w-auto" asChild>
                       <a href={contract.URL} target="_blank" rel="noopener noreferrer">
                         Apply Now <ExternalLink className="ml-1 h-3.5 w-3.5" />
                       </a>
