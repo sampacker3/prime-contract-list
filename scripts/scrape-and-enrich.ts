@@ -354,35 +354,41 @@ async function resolveCompanyDomain(
     // ignore — fall through to GPT
   }
 
-  // ── Step 2: GPT fallback ───────────────────────────────────────────────────
-  const prompt = `A UK company posted a contract job on LinkedIn.
+  // ── Step 2: GPT web search — browses the LinkedIn company page ────────────
+  // Only called when Clearbit has no confident match (~$0.03/call)
+  if (linkedInUrl) {
+    try {
+      const response = await openai.responses.create({
+        model: "gpt-4o-mini",
+        tools: [{ type: "web_search_preview" }],
+        input: `Browse this LinkedIn company page and find the company's external website URL (the "Visit website" link on their profile): ${linkedInUrl}
 
-Company name: ${company}
-LinkedIn URL: ${linkedInUrl || "not available"}
-LinkedIn slug: ${slug || "not available"}
-Domain candidates derived from slug: ${slugCandidates.join(", ") || "none"}
+Company name for reference: ${company}
 
-What is the most likely correct website domain for this company?
-Use your own knowledge of the company first — the slug is a hint but may include descriptive suffixes (e.g. "lhh-recruitment" slug → actual domain is "lhh.com").
-Only fall back to the slug-derived candidates if you have no other knowledge.
+Return ONLY a JSON object with a single key: { "domain": "example.com" }
+Return { "domain": null } if you cannot find a website URL.
+Do not include http:// or https:// — just the bare domain (e.g. "wearestation.com").`,
+      });
 
-Return JSON only: { "domain": "the correct domain" }
-Return null if not confident.`;
+      // Extract text from the response output blocks
+      const text = response.output
+        .filter((b: { type: string }) => b.type === "message")
+        .flatMap((b: { content: Array<{ type: string; text: string }> }) => b.content)
+        .filter((c: { type: string }) => c.type === "output_text")
+        .map((c: { text: string }) => c.text)
+        .join("");
 
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      temperature: 0,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}");
-    if (parsed.domain) {
-      console.log(`  Domain (GPT): ${parsed.domain}`);
-      return parsed.domain;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.domain && parsed.domain !== "null") {
+          console.log(`  Domain (GPT web search): ${parsed.domain}`);
+          return parsed.domain;
+        }
+      }
+    } catch (err) {
+      console.warn(`  GPT web search failed: ${(err as Error).message}`);
     }
-  } catch {
-    // ignore
   }
 
   // ── Step 3: slug-derived fallback ─────────────────────────────────────────
