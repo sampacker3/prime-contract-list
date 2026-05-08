@@ -5,6 +5,9 @@ name: LinkedIn Contract Scraper (no email lookup)
 # Trigger manually from the GitHub Actions UI.
 
 on:
+  schedule:
+    # Runs every 2 hours
+    - cron: "0 */2 * * *"
   workflow_dispatch:
 
 jobs:
