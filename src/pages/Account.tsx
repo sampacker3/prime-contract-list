@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from "react";
-import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle, LogOut, FileText, Upload, Trash2, Download, Loader2, Lock, Eye, EyeOff, CalendarDays, Info, Sparkles, MapPin, Building2, ArrowRight } from "lucide-react";
+import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle, LogOut, FileText, Upload, Trash2, Download, Loader2, Lock, Eye, EyeOff, CalendarDays, Info, Sparkles, MapPin, Building2, ArrowRight, BellRing, CheckCircle2, AlertCircle as AlertCircleIcon, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle } from "lucide-react";
@@ -19,11 +19,21 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 type Profile = {
-  subscription_plan: 'free' | 'pro' | 'enterprise'
+  subscription_plan: 'free' | 'pro' | 'enterprise' | 'recruiter'
   subscription_active: boolean
   subscription_renews_at: string | null
   stripe_customer_id: string | null
   full_name: string | null
+  contract_end_date: string | null
+  contract_end_notify_days: number | null
+}
+
+type CvReview = {
+  headline: string
+  score: number
+  strengths: string[]
+  gaps: string[]
+  quick_wins: string[]
 }
 
 type ScoredContract = {
@@ -56,7 +66,7 @@ const AccountPage = () => {
       // maybeSingle returns null instead of throwing when no row exists
       const { data } = await supabase
         .from('profiles')
-        .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id, full_name')
+        .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id, full_name, contract_end_date, contract_end_notify_days')
         .eq('id', user!.id)
         .maybeSingle();
 
@@ -127,6 +137,77 @@ const AccountPage = () => {
 
   const [cvName, setCvName] = useState<string | null>(null);
   const [cvChecking, setCvChecking] = useState(true);
+
+  // Contract end date
+  const [endDateValue, setEndDateValue] = useState("");
+  const [notifyDaysValue, setNotifyDaysValue] = useState("30");
+  const [endDateSaving, setEndDateSaving] = useState(false);
+  const [endDateSaved, setEndDateSaved] = useState(false);
+
+  // Populate end date from profile once loaded
+  useEffect(() => {
+    if (profile?.contract_end_date) setEndDateValue(profile.contract_end_date);
+    if (profile?.contract_end_notify_days) setNotifyDaysValue(String(profile.contract_end_notify_days));
+  }, [profile?.contract_end_date, profile?.contract_end_notify_days]);
+
+  const handleSaveEndDate = async () => {
+    if (!user) return;
+    setEndDateSaving(true);
+    await supabase.from('profiles').update({
+      contract_end_date: endDateValue || null,
+      contract_end_notify_days: Number(notifyDaysValue),
+    }).eq('id', user.id);
+    await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+    setEndDateSaving(false);
+    setEndDateSaved(true);
+    setTimeout(() => setEndDateSaved(false), 2500);
+  };
+
+  const handleClearEndDate = async () => {
+    if (!user) return;
+    setEndDateValue("");
+    await supabase.from('profiles').update({ contract_end_date: null }).eq('id', user.id);
+    await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+  };
+
+  // CV Review
+  const [cvReview, setCvReview] = useState<CvReview | null>(null);
+  const [cvReviewLoading, setCvReviewLoading] = useState(false);
+  const [cvReviewError, setCvReviewError] = useState<string | null>(null);
+  const [cvReviewOpen, setCvReviewOpen] = useState(false);
+
+  // Load saved review from DB on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('cv_reviews').select('review').eq('user_id', user.id).maybeSingle().then(({ data }) => {
+      if (data?.review) setCvReview(data.review as CvReview);
+    });
+  }, [user]);
+
+  const handleGetCvReview = async () => {
+    if (!user) return;
+    setCvReviewLoading(true);
+    setCvReviewError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/cv-review`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+        },
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) throw new Error(json.error ?? 'Review failed');
+      setCvReview(json.review as CvReview);
+      setCvReviewOpen(true);
+    } catch (err) {
+      setCvReviewError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setCvReviewLoading(false);
+    }
+  };
 
   // Name editing
   const [nameEditing, setNameEditing] = useState(false);
@@ -320,7 +401,10 @@ const AccountPage = () => {
       await Promise.all([
         supabase.storage.from(CV_BUCKET).remove([`${user.id}/cv.pdf`]),
         supabase.from("usercvs").delete().contains("metadata", { user_id: user.id }),
+        supabase.from("cv_reviews").delete().eq("user_id", user.id),
       ]);
+      setCvReview(null);
+      setCvReviewOpen(false);
       // Brief pause to let Supabase propagate before UI allows a new upload
       await new Promise((resolve) => setTimeout(resolve, 1000));
       localStorage.removeItem(`cv_filename_${user.id}`);
@@ -659,6 +743,195 @@ const AccountPage = () => {
                   }
                 </Button>
               </>
+            )}
+          </div>
+
+          {/* CV Review — only when CV is uploaded */}
+          {cvName && isPro && (
+            <div className="mt-5 pt-5 border-t">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <p className="font-medium text-sm text-foreground">AI CV Review</p>
+                  {cvReview && (
+                    <span className="text-xs text-muted-foreground">
+                      · Score: <span className={`font-semibold ${cvReview.score >= 70 ? 'text-green-600 dark:text-green-400' : cvReview.score >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-red-500'}`}>{cvReview.score}/100</span>
+                    </span>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant={cvReview ? "outline" : "hero"}
+                  onClick={handleGetCvReview}
+                  disabled={cvReviewLoading}
+                  className="shrink-0 text-xs h-8"
+                >
+                  {cvReviewLoading
+                    ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Analysing…</>
+                    : cvReview
+                      ? <><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Refresh Review</>
+                      : <><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Get CV Review</>
+                  }
+                </Button>
+              </div>
+
+              {cvReviewError && (
+                <p className="text-xs text-destructive mb-2">{cvReviewError}</p>
+              )}
+
+              {!cvReview && !cvReviewLoading && (
+                <p className="text-xs text-muted-foreground">
+                  Get personalised feedback on your CV based on your skills and the contract types you're targeting.
+                </p>
+              )}
+
+              {cvReview && (
+                <div>
+                  {/* Headline + toggle */}
+                  <button
+                    onClick={() => setCvReviewOpen(o => !o)}
+                    className="w-full text-left"
+                  >
+                    <p className="text-sm text-foreground italic mb-1">"{cvReview.headline}"</p>
+                    <p className="text-xs text-primary hover:underline">{cvReviewOpen ? 'Hide details ↑' : 'Show full review ↓'}</p>
+                  </button>
+
+                  {cvReviewOpen && (
+                    <div className="mt-4 space-y-4">
+                      {/* Score bar */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-muted-foreground">Overall CV score</span>
+                          <span className={`text-xs font-bold ${cvReview.score >= 70 ? 'text-green-600 dark:text-green-400' : cvReview.score >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-red-500'}`}>{cvReview.score}/100</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${cvReview.score >= 70 ? 'bg-green-500' : cvReview.score >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                            style={{ width: `${cvReview.score}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Strengths */}
+                      <div>
+                        <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Strengths
+                        </p>
+                        <ul className="space-y-1.5">
+                          {cvReview.strengths.map((s, i) => (
+                            <li key={i} className="text-xs text-foreground flex items-start gap-2">
+                              <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Gaps */}
+                      <div>
+                        <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                          <AlertCircleIcon className="h-3.5 w-3.5 text-amber-500" /> Areas to improve
+                        </p>
+                        <ul className="space-y-1.5">
+                          {cvReview.gaps.map((g, i) => (
+                            <li key={i} className="text-xs text-foreground flex items-start gap-2">
+                              <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                              {g}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Quick wins */}
+                      <div>
+                        <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                          <Zap className="h-3.5 w-3.5 text-primary" /> Quick wins
+                        </p>
+                        <ul className="space-y-1.5">
+                          {cvReview.quick_wins.map((q, i) => (
+                            <li key={i} className="text-xs text-foreground flex items-start gap-2">
+                              <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                              {q}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Contract end date reminder */}
+        <div className="rounded-xl border bg-card p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary">
+              <BellRing className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-heading font-semibold text-foreground">Contract End Reminder</h2>
+              <p className="text-sm text-muted-foreground">Get notified before your contract ends with matching roles</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Current contract end date</label>
+                <input
+                  type="date"
+                  value={endDateValue}
+                  onChange={e => setEndDateValue(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Notify me this many days before</label>
+                <select
+                  value={notifyDaysValue}
+                  onChange={e => setNotifyDaysValue(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="14">14 days before</option>
+                  <option value="21">21 days before</option>
+                  <option value="30">30 days before</option>
+                  <option value="45">45 days before</option>
+                  <option value="60">60 days before</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="hero"
+                size="sm"
+                onClick={handleSaveEndDate}
+                disabled={endDateSaving || !endDateValue}
+              >
+                {endDateSaving
+                  ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving…</>
+                  : endDateSaved
+                    ? <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-green-400" /> Saved!</>
+                    : <><BellRing className="h-3.5 w-3.5 mr-1.5" /> Save Reminder</>
+                }
+              </Button>
+              {endDateValue && (
+                <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleClearEndDate}>
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            {endDateValue && (
+              <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2.5">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                We'll email you matching contracts {notifyDaysValue} days before{' '}
+                <span className="font-medium text-foreground">
+                  {new Date(endDateValue).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>, then again at 14, 7, 3, and 1 day out.
+              </div>
             )}
           </div>
         </div>

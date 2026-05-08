@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark, FileText, ChevronRight, Mail, Copy, Check } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark, FileText, ChevronRight, Mail, Copy, Check, Sparkles, Loader2 } from "lucide-react";
+import { useCvFit } from "@/hooks/useCvFit";
+import { useCVExists } from "@/hooks/useCVExists";
 import ApplyWithAIButton from "@/components/ApplyWithAIButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -183,6 +185,21 @@ export default function ContractDetail() {
   const { savedJobIds, toggleSave } = useSavedJobs();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
+
+  // 2-second debounce before firing the CV fit API call (avoids cost on quick exits)
+  const [cvFitReady, setCvFitReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setCvFitReady(true), 2000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const { hasCv } = useCVExists();
+  const { data: cvFit, isLoading: cvFitLoading } = useCvFit(
+    contract?.id ?? null,
+    contract?.JobTitle ?? null,
+    contract?.Description ?? null,
+    cvFitReady && hasCv
+  );
 
   const copyEmail = (email: string) => {
     navigator.clipboard.writeText(email);
@@ -390,6 +407,44 @@ export default function ContractDetail() {
               )}
 
             </div>
+
+            {/* CV Fit Score — Pro users with CV only */}
+            {isPro && hasCv && (
+              <div className="border-b px-5 py-3 bg-primary/3">
+                {cvFitLoading || (!cvFit && cvFitReady) ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                    Analysing your CV fit…
+                  </div>
+                ) : cvFit ? (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {/* Score ring */}
+                    <div className={`flex items-center gap-1.5 font-heading font-bold text-sm shrink-0 ${
+                      cvFit.score >= 70 ? "text-green-600 dark:text-green-400"
+                      : cvFit.score >= 40 ? "text-amber-600 dark:text-amber-400"
+                      : "text-red-500"
+                    }`}>
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {cvFit.score}% fit
+                    </div>
+                    {/* Progress bar */}
+                    <div className="flex-1 min-w-[80px] max-w-[120px] h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          cvFit.score >= 70 ? "bg-green-500"
+                          : cvFit.score >= 40 ? "bg-amber-500"
+                          : "bg-red-500"
+                        }`}
+                        style={{ width: `${cvFit.score}%` }}
+                      />
+                    </div>
+                    {/* Summary */}
+                    <p className="text-xs text-muted-foreground flex-1 min-w-0">{cvFit.summary}</p>
+                    <span className="text-[10px] text-muted-foreground/50 shrink-0">AI</span>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             {/* Body */}
             <div className="p-6">
