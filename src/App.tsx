@@ -15,6 +15,7 @@ function ScrollToTop() {
   }, [pathname]);
   return null;
 }
+
 import Index from "./pages/Index.tsx";
 import Contracts from "./pages/Contracts.tsx";
 import Alerts from "./pages/Alerts.tsx";
@@ -38,12 +39,31 @@ import DayRates from "./pages/DayRates.tsx";
 import IR35Calculator from "./pages/IR35Calculator.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
+// Recruiter portal pages
+import RecruiterSignup from "./pages/recruiter/RecruiterSignup.tsx";
+import RecruiterUpgrade from "./pages/recruiter/RecruiterUpgrade.tsx";
+import RecruiterDashboard from "./pages/recruiter/RecruiterDashboard.tsx";
+import RecruiterCandidates from "./pages/recruiter/RecruiterCandidates.tsx";
+import RecruiterCandidateProfile from "./pages/recruiter/RecruiterCandidateProfile.tsx";
+import RecruiterSavedCandidates from "./pages/recruiter/RecruiterSavedCandidates.tsx";
+import RecruiterPostContract from "./pages/recruiter/RecruiterPostContract.tsx";
+import RecruiterContracts from "./pages/recruiter/RecruiterContracts.tsx";
+
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+/** Requires auth AND account_type === 'recruiter'. Non-recruiters go to /contracts. */
+function RecruiterRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, isRecruiter, proLoading } = useAuth();
+  if (loading || proLoading) return null;
+  if (!user) return <Navigate to="/recruiter/signup" replace />;
+  if (!isRecruiter) return <Navigate to="/contracts" replace />;
   return <>{children}</>;
 }
 
@@ -58,6 +78,7 @@ const App = () => (
         <AuthProvider>
           <ScrollToTop />
           <Routes>
+            {/* Contractor routes */}
             <Route path="/" element={<Index />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/search-preview" element={<SearchPreview />} />
@@ -79,6 +100,19 @@ const App = () => (
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/day-rates" element={<DayRates />} />
             <Route path="/ir35-calculator" element={<IR35Calculator />} />
+
+            {/* Recruiter portal — public */}
+            <Route path="/recruiter/signup" element={<RecruiterSignup />} />
+            <Route path="/recruiter/upgrade" element={<RecruiterUpgrade />} />
+
+            {/* Recruiter portal — protected */}
+            <Route path="/recruiter/dashboard" element={<RecruiterRoute><RecruiterDashboard /></RecruiterRoute>} />
+            <Route path="/recruiter/candidates" element={<RecruiterRoute><RecruiterCandidates /></RecruiterRoute>} />
+            <Route path="/recruiter/candidates/:id" element={<RecruiterRoute><RecruiterCandidateProfile /></RecruiterRoute>} />
+            <Route path="/recruiter/saved" element={<RecruiterRoute><RecruiterSavedCandidates /></RecruiterRoute>} />
+            <Route path="/recruiter/post-contract" element={<RecruiterRoute><RecruiterPostContract /></RecruiterRoute>} />
+            <Route path="/recruiter/contracts" element={<RecruiterRoute><RecruiterContracts /></RecruiterRoute>} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

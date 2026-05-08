@@ -29,11 +29,12 @@ export type Database = {
           email: string | null
           full_name: string | null
           created_at: string
-          subscription_plan: 'free' | 'pro' | 'enterprise'
+          subscription_plan: 'free' | 'pro' | 'enterprise' | 'recruiter'
           subscription_active: boolean
           subscription_renews_at: string | null
           cv_filename: string | null
           stripe_customer_id: string | null
+          account_type: 'contractor' | 'recruiter' | null
         }
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at'>
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
@@ -80,6 +81,61 @@ export type Database = {
         }
         Update: never
       }
+      recruiter_saved_candidates: {
+        Row: {
+          id: number
+          recruiter_id: string
+          candidate_id: string
+          created_at: string
+        }
+        Insert: {
+          recruiter_id: string
+          candidate_id: string
+        }
+        Update: never
+      }
+      recruiter_cv_views: {
+        Row: {
+          id: number
+          recruiter_id: string
+          candidate_id: string
+          viewed_at: string
+        }
+        Insert: {
+          recruiter_id: string
+          candidate_id: string
+        }
+        Update: never
+      }
+      recruiter_contracts: {
+        Row: {
+          id: number
+          recruiter_id: string
+          title: string
+          company: string | null
+          location: string | null
+          description: string | null
+          pay_rate: string | null
+          employment_type: string | null
+          work_type: string | null
+          ir35_status: string | null
+          status: 'active' | 'closed'
+          created_at: string
+        }
+        Insert: {
+          recruiter_id: string
+          title: string
+          company?: string | null
+          location?: string | null
+          description?: string | null
+          pay_rate?: string | null
+          employment_type?: string | null
+          work_type?: string | null
+          ir35_status?: string | null
+          status?: 'active' | 'closed'
+        }
+        Update: Partial<Omit<Database['public']['Tables']['recruiter_contracts']['Insert'], 'recruiter_id'>>
+      }
     }
   }
 }
@@ -89,3 +145,5 @@ export type Contract = Database['public']['Tables']['LinkedinScrapeResults']['Ro
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Alert = Database['public']['Tables']['alerts']['Row']
 export type SavedJob = Database['public']['Tables']['UserSavedJobs']['Row']
+export type RecruiterSavedCandidate = Database['public']['Tables']['recruiter_saved_candidates']['Row']
+export type RecruiterContract = Database['public']['Tables']['recruiter_contracts']['Row']

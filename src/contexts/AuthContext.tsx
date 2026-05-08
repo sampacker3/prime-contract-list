@@ -8,7 +8,10 @@ type AuthContextType = {
   loading: boolean
   isPro: boolean
   proLoading: boolean
+  isRecruiter: boolean
+  accountType: 'contractor' | 'recruiter' | null
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUpRecruiter: (email: string, password: string) => Promise<{ error: Error | null }>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
@@ -24,18 +27,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [isPro, setIsPro] = useState(false)
   const [proLoading, setProLoading] = useState(true)
+  const [isRecruiter, setIsRecruiter] = useState(false)
+  const [accountType, setAccountType] = useState<'contractor' | 'recruiter' | null>(null)
 
-  // Fetch subscription status whenever user changes
+  // Fetch subscription + account type whenever user changes
   useEffect(() => {
-    if (!user) { setIsPro(false); setProLoading(false); return; }
+    if (!user) {
+      setIsPro(false)
+      setIsRecruiter(false)
+      setAccountType(null)
+      setProLoading(false)
+      return
+    }
     setProLoading(true)
     supabase
       .from('profiles')
-      .select('subscription_active')
+      .select('subscription_active, account_type, subscription_plan')
       .eq('id', user.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         setIsPro(!!data?.subscription_active)
+
+        // If user signed up as recruiter but profile doesn't reflect it yet (e.g. just confirmed email)
+        const metaAccountType = user.user_metadata?.account_type as string | undefined
+        if (metaAccountType === 'recruiter' && data?.account_type !== 'recruiter') {
+          await supabase
+            .from('profiles')
+            .upsert({ id: user.id, account_type: 'recruiter' })
+          setIsRecruiter(true)
+          setAccountType('recruiter')
+        } else {
+          const type = data?.account_type ?? null
+          setIsRecruiter(type === 'recruiter')
+          setAccountType(type as 'contractor' | 'recruiter' | null)
+        }
         setProLoading(false)
       })
       .catch(() => setProLoading(false))
@@ -58,6 +83,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ email, password })
+    return { error }
+  }
+
+  const signUpRecruiter = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { account_type: 'recruiter' } },
+    })
     return { error }
   }
 
@@ -91,7 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, isPro, proLoading, signUp, signIn, signInWithGoogle, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{
+      session, user, loading, isPro, proLoading,
+      isRecruiter, accountType,
+      signUp, signUpRecruiter, signIn, signInWithGoogle,
+      signOut, resetPassword, updatePassword,
+    }}>
       {children}
     </AuthContext.Provider>
   )

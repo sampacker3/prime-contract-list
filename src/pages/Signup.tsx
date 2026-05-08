@@ -255,6 +255,17 @@ export default function Signup() {
                       {tab === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
                     </button>
                   </div>
+
+                  {tab === 'signup' && (
+                    <div className="mt-4 text-center">
+                      <p className="text-xs text-muted-foreground">
+                        Are you a recruiter?{' '}
+                        <Link to="/recruiter/signup" className="text-primary hover:underline font-medium">
+                          Create a recruiter account →
+                        </Link>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
