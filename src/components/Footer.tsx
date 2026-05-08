@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, Briefcase } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-const Footer = () => (
+const Footer = () => {
+  const { isRecruiter } = useAuth();
+  return (
   <footer className="border-t bg-muted/30">
     <div className="container py-12">
       <div className="grid md:grid-cols-5 gap-8">
@@ -47,11 +50,22 @@ const Footer = () => (
           </div>
         </div>
       </div>
-      <div className="mt-10 pt-6 border-t text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} IT ContractHub. All rights reserved.
+      {/* Recruiter CTA */}
+      <div className="mt-10 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p className="text-xs text-muted-foreground">
+          © {new Date().getFullYear()} IT ContractHub. All rights reserved.
+        </p>
+        <Link
+          to={isRecruiter ? "/recruiter/dashboard" : "/recruiter/signup"}
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border border-border rounded-full px-3 py-1.5 hover:border-foreground/30"
+        >
+          <Briefcase className="h-3 w-3" />
+          {isRecruiter ? "Go to Recruiter Dashboard" : "Are you a recruiter?"}
+        </Link>
       </div>
     </div>
   </footer>
-);
+  );
+};
 
 export default Footer;
