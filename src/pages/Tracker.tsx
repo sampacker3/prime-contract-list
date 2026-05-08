@@ -431,8 +431,8 @@ export default function TrackerPage() {
               </div>
             </div>
 
-            {/* Desktop: 3-column kanban, centred */}
-            <div className="hidden md:grid md:grid-cols-3 gap-5 max-w-4xl mx-auto">
+            {/* Desktop: 4-column kanban */}
+            <div className="hidden md:grid md:grid-cols-4 gap-5">
               {COLUMNS.map(col => (
                 <Column key={col.status} col={col} apps={byStatus(col.status)} />
               ))}
