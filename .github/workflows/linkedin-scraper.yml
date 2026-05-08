@@ -2,8 +2,8 @@ name: LinkedIn Contract Scraper
 
 on:
   schedule:
-    # Runs daily at 08:00 UTC (9am BST / 8am GMT)
-    - cron: "0 8 * * *"
+    # Runs every 2 hours
+    - cron: "0 */2 * * *"
   workflow_dispatch: # allow manual runs from GitHub UI
 
 jobs:
