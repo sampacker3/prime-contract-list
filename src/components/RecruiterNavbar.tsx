@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, Bookmark, Briefcase, PlusCircle,
-  Sun, Moon, Menu, X, LogOut, Settings,
+  Sun, Moon, Menu, X, LogOut, Settings, Search,
 } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -34,8 +34,8 @@ export default function RecruiterNavbar() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link to="/recruiter/dashboard" className="flex items-center gap-2 font-heading text-xl font-bold tracking-tight text-foreground">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600">
-            <Briefcase className="h-4 w-4 text-white" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-brand">
+            <Search className="h-4 w-4 text-primary-foreground" />
           </div>
           <span>
             IT ContractHub{" "}
