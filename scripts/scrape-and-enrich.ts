@@ -91,6 +91,7 @@ interface Enrichment {
   workingType: string;
   payRate: string | null;
   contractDuration: string | null;
+  isContract: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -266,10 +267,22 @@ function parseJobDetail(html: string, card: JobCard): JobDetail {
 
 // ── Phase 3: AI enrichment ────────────────────────────────────────────────────
 
+// Employment types that are definitively not contract roles
+const PERMANENT_EMPLOYMENT_TYPES = new Set([
+  "full-time", "part-time", "internship", "volunteer",
+]);
+
+function isPermanentByEmploymentType(employmentType: string): boolean {
+  return PERMANENT_EMPLOYMENT_TYPES.has(employmentType.toLowerCase().trim());
+}
+
 async function enrichWithOpenAI(job: JobDetail): Promise<Enrichment> {
-  const prompt = `You are analysing a UK contract job posting. Return ONLY valid JSON with these exact keys:
+  const prompt = `You are analysing a UK job posting scraped from LinkedIn.
+
+Return ONLY valid JSON with these exact keys:
 
 {
+  "isContract": true if this is a contract/freelance/interim role, false if it is a permanent or fixed-term employee role,
   "summary": "2-3 sentence summary of the role and key skills required. Do not mention the company name.",
   "ir35Status": "Inside IR35" | "Outside IR35" | "Unknown",
   "workingType": "Remote" | "Hybrid" | "Onsite" | "Unknown",
@@ -277,6 +290,11 @@ async function enrichWithOpenAI(job: JobDetail): Promise<Enrichment> {
   "contractDuration": "extracted contract duration (e.g. 6 months, 12 months, ongoing), or null if not mentioned"
 }
 
+Clues that it is a contract role: mentions of day rate, IR35, inside/outside IR35, Ltd company, umbrella, contract duration in months, "contract", "interim", "freelance".
+Clues that it is permanent: mentions of salary, annual pay, benefits package, pension, holiday allowance, "permanent", "perm", "FTE".
+
+Job title: ${job.jobTitle}
+Employment type (from LinkedIn): ${job.employmentType || "not specified"}
 Job description:
 ${job.description}
 
@@ -292,6 +310,7 @@ Salary info: ${job.salaryRaw || "not provided"}`;
   try {
     const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}");
     return {
+      isContract: parsed.isContract !== false, // default true if unclear
       summary: parsed.summary ?? "",
       ir35Status: parsed.ir35Status ?? "Unknown",
       workingType: parsed.workingType ?? "Unknown",
@@ -300,6 +319,7 @@ Salary info: ${job.salaryRaw || "not provided"}`;
     };
   } catch {
     return {
+      isContract: true, // don't drop jobs on parse error
       summary: "",
       ir35Status: "Unknown",
       workingType: "Unknown",
@@ -622,12 +642,16 @@ async function main() {
     if (openAiPromise && pendingDetail) {
       try {
         const enrichment = await openAiPromise;
-        const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
-        await saveJob(pendingDetail, enrichment, posterEmail);
-        processed++;
-        console.log(
-          `  ✓ ${pendingDetail.jobTitle} — IR35: ${enrichment.ir35Status} | ${enrichment.workingType} | ${enrichment.payRate ?? "no rate"} | ${enrichment.contractDuration ?? "no duration"}${posterEmail ? ` | ${posterEmail}` : ""}`
-        );
+        if (!enrichment.isContract) {
+          console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — AI classified as permanent`);
+        } else {
+          const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
+          await saveJob(pendingDetail, enrichment, posterEmail);
+          processed++;
+          console.log(
+            `  ✓ ${pendingDetail.jobTitle} — IR35: ${enrichment.ir35Status} | ${enrichment.workingType} | ${enrichment.payRate ?? "no rate"} | ${enrichment.contractDuration ?? "no duration"}${posterEmail ? ` | ${posterEmail}` : ""}`
+          );
+        }
       } catch (err) {
         console.warn(`  ✗ Save failed: ${(err as Error).message}`);
         failed++;
@@ -654,6 +678,14 @@ async function main() {
       continue;
     }
 
+    // Pre-filter: drop obviously permanent jobs before spending OpenAI credits
+    if (isPermanentByEmploymentType(pendingDetail.employmentType)) {
+      console.log(`  ✗ Skipped — employment type is "${pendingDetail.employmentType}" (not a contract)`);
+      openAiPromise = null;
+      pendingDetail = null;
+      continue;
+    }
+
     // Fire OpenAI immediately — runs in background during jitter sleep
     openAiPromise = enrichWithOpenAI(pendingDetail);
 
@@ -667,12 +699,16 @@ async function main() {
   if (openAiPromise && pendingDetail) {
     try {
       const enrichment = await openAiPromise;
-      const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
-      await saveJob(pendingDetail, enrichment, posterEmail);
-      processed++;
-      console.log(
-        `  ✓ ${pendingDetail.jobTitle} — IR35: ${enrichment.ir35Status} | ${enrichment.workingType} | ${enrichment.payRate ?? "no rate"} | ${enrichment.contractDuration ?? "no duration"}${posterEmail ? ` | ${posterEmail}` : ""}`
-      );
+      if (!enrichment.isContract) {
+        console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — AI classified as permanent`);
+      } else {
+        const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
+        await saveJob(pendingDetail, enrichment, posterEmail);
+        processed++;
+        console.log(
+          `  ✓ ${pendingDetail.jobTitle} — IR35: ${enrichment.ir35Status} | ${enrichment.workingType} | ${enrichment.payRate ?? "no rate"} | ${enrichment.contractDuration ?? "no duration"}${posterEmail ? ` | ${posterEmail}` : ""}`
+        );
+      }
     } catch (err) {
       console.warn(`  ✗ Final save failed: ${(err as Error).message}`);
       failed++;
