@@ -21,6 +21,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
+import { Resend } from "resend";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const MIN_DELAY = Number(process.env.MIN_DELAY_MS ?? 1500);
 const MAX_DELAY = Number(process.env.MAX_DELAY_MS ?? 3000);
 const DRY_RUN = process.env.DRY_RUN === "true";
@@ -45,6 +47,9 @@ if (!OPENAI_API_KEY) {
 if (!HUNTER_API_KEY) {
   console.warn("No HUNTER_API_KEY set — poster email lookup will be skipped");
 }
+if (!RESEND_API_KEY) {
+  console.warn("No RESEND_API_KEY set — contract alert emails will be skipped");
+}
 
 const SEARCH_CONFIG = {
   jobType: "C",            // Contract only
@@ -59,8 +64,16 @@ const DELAY_BETWEEN_TERMS_MS = 6000;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+interface AlertRow {
+  id: number;
+  user_id: string;
+  keywords: string;
+  match_count: number;
+}
 
 interface JobCard {
   postingDate: string;   // UK local date (YYYY-MM-DD)
@@ -522,6 +535,167 @@ async function findPosterEmail(
   }
 }
 
+// ── Alert matching ────────────────────────────────────────────────────────────
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function alertMatchesJob(keyword: string, job: JobDetail): boolean {
+  const searchText = `${job.jobTitle} ${job.description}`.toLowerCase();
+  const kw = keyword.toLowerCase().trim();
+  if (!kw) return false;
+  // Word-boundary match for short keywords (≤3 chars, e.g. "C", "JS")
+  // to avoid "C" matching "Contract", "Cloud" etc.
+  if (kw.length <= 3) {
+    return new RegExp(`\\b${escapeRegex(kw)}\\b`, "i").test(searchText);
+  }
+  return searchText.includes(kw);
+}
+
+function buildAlertEmailHtml(
+  keyword: string,
+  job: JobDetail,
+  enrichment: Enrichment
+): string {
+  const badges = [
+    enrichment.ir35Status !== "Unknown" ? enrichment.ir35Status : null,
+    enrichment.workingType !== "Unknown" ? enrichment.workingType : null,
+    enrichment.payRate,
+    enrichment.contractDuration,
+  ]
+    .filter(Boolean)
+    .map(
+      (b) =>
+        `<span style="display:inline-block;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;margin:0 4px 4px 0;">${b}</span>`
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>New contract match: ${keyword}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
+
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <span style="font-size:22px;font-weight:700;color:#1d4ed8;letter-spacing:-0.5px;">IT Contract<span style="color:#0f172a;">Hub</span></span>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background:#ffffff;border-radius:12px;padding:40px 40px 32px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+
+              <!-- Icon -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:24px;">
+                    <div style="width:48px;height:48px;background:#eff6ff;border-radius:12px;display:inline-block;line-height:48px;text-align:center;font-size:24px;">🔔</div>
+                  </td>
+                </tr>
+              </table>
+
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">New contract match</h1>
+              <p style="margin:0 0 28px;font-size:15px;color:#64748b;text-align:center;line-height:1.6;">
+                A new contract matching your alert for <strong style="color:#1d4ed8;">${keyword}</strong> has just been posted.
+              </p>
+
+              <!-- Contract card -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;background:#f8fafc;padding:0;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:20px;">
+                    <p style="margin:0 0 4px;font-size:17px;font-weight:700;color:#0f172a;">${job.jobTitle}</p>
+                    <p style="margin:0 0 12px;font-size:14px;color:#64748b;">${job.company} &middot; ${job.location}</p>
+                    ${badges ? `<div style="margin-bottom:${enrichment.summary ? "12px" : "0"};">${badges}</div>` : ""}
+                    ${enrichment.summary ? `<p style="margin:0;font-size:14px;color:#475569;line-height:1.6;">${enrichment.summary}</p>` : ""}
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:28px;">
+                    <a href="${job.url}"
+                       style="display:inline-block;background:#1d4ed8;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:13px 32px;border-radius:8px;letter-spacing:0.1px;">
+                      View contract &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;font-size:13px;color:#94a3b8;text-align:center;">
+                You're receiving this because you have an alert set up for <strong>${keyword}</strong>.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 0 0;text-align:center;">
+              <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;">
+                <a href="https://itcontracthub.co.uk/alerts" style="color:#94a3b8;text-decoration:underline;">Manage alerts</a>
+                &nbsp;&middot;&nbsp;
+                <a href="https://itcontracthub.co.uk" style="color:#94a3b8;text-decoration:none;">itcontracthub.co.uk</a>
+              </p>
+              <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">&copy; 2025 IT ContractHub</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function dispatchContractAlerts(
+  job: JobDetail,
+  enrichment: Enrichment,
+  alerts: AlertRow[],
+  proUsers: Map<string, string> // user_id → email
+): Promise<void> {
+  if (!resend || !alerts.length) return;
+
+  const matching = alerts.filter((a) => alertMatchesJob(a.keywords, job));
+  if (!matching.length) return;
+
+  for (const alert of matching) {
+    const email = proUsers.get(alert.user_id);
+    if (!email) continue;
+
+    try {
+      await resend.emails.send({
+        from: "IT ContractHub <alerts@itcontracthub.co.uk>",
+        to: [email],
+        subject: `New contract match: ${alert.keywords}`,
+        html: buildAlertEmailHtml(alert.keywords, job, enrichment),
+      });
+      console.log(`  📧 Alert sent to ${email} for "${alert.keywords}"`);
+
+      // Increment match_count in DB and in memory
+      await supabase
+        .from("alerts")
+        .update({ match_count: alert.match_count + 1 })
+        .eq("id", alert.id);
+      alert.match_count++;
+    } catch (err) {
+      console.warn(`  Alert email failed: ${(err as Error).message}`);
+    }
+  }
+}
+
 // ── Save ──────────────────────────────────────────────────────────────────────
 
 async function saveJob(
@@ -594,6 +768,39 @@ async function main() {
 
   console.log(`Found ${searchTerms.length} search terms: ${searchTerms.join(", ")}\n`);
 
+  // Load enabled alerts + pro user emails (once, reused for every job saved)
+  const alerts: AlertRow[] = [];
+  const proUsers = new Map<string, string>(); // user_id → email
+
+  if (resend) {
+    const { data: alertRows } = await supabase
+      .from("alerts")
+      .select("id, user_id, keywords, match_count")
+      .eq("enabled", true);
+
+    if (alertRows?.length) {
+      alerts.push(...(alertRows as AlertRow[]));
+
+      // Get unique user IDs from alerts, then filter to pro subscribers only
+      const userIds = [...new Set(alerts.map((a) => a.user_id))];
+      const { data: profileRows } = await supabase
+        .from("profiles")
+        .select("id, subscription_active")
+        .in("id", userIds)
+        .eq("subscription_active", true);
+
+      const proUserIds = new Set((profileRows ?? []).map((p: { id: string }) => p.id));
+
+      // Fetch email for each pro user via auth admin API
+      for (const userId of proUserIds) {
+        const { data } = await supabase.auth.admin.getUserById(userId);
+        if (data?.user?.email) proUsers.set(userId, data.user.email);
+      }
+
+      console.log(`Loaded ${alerts.length} alerts for ${proUsers.size} pro user(s)\n`);
+    }
+  }
+
   // Collect all new job cards across all search terms first
   const allNewJobs: JobCard[] = [];
 
@@ -647,6 +854,7 @@ async function main() {
         } else {
           const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
           await saveJob(pendingDetail, enrichment, posterEmail);
+          await dispatchContractAlerts(pendingDetail, enrichment, alerts, proUsers);
           processed++;
           console.log(
             `  ✓ ${pendingDetail.jobTitle} — IR35: ${enrichment.ir35Status} | ${enrichment.workingType} | ${enrichment.payRate ?? "no rate"} | ${enrichment.contractDuration ?? "no duration"}${posterEmail ? ` | ${posterEmail}` : ""}`
@@ -704,6 +912,7 @@ async function main() {
       } else {
         const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
         await saveJob(pendingDetail, enrichment, posterEmail);
+        await dispatchContractAlerts(pendingDetail, enrichment, alerts, proUsers);
         processed++;
         console.log(
           `  ✓ ${pendingDetail.jobTitle} — IR35: ${enrichment.ir35Status} | ${enrichment.workingType} | ${enrichment.payRate ?? "no rate"} | ${enrichment.contractDuration ?? "no duration"}${posterEmail ? ` | ${posterEmail}` : ""}`

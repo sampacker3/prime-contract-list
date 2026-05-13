@@ -32,7 +32,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # HUNTER_API_KEY intentionally omitted — skips all email lookup
+          # HUNTER_API_KEY intentionally omitted — skips poster email lookup
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           MIN_DELAY_MS: 1500
           MAX_DELAY_MS: 3000
         run: npx tsx scripts/scrape-and-enrich.ts
