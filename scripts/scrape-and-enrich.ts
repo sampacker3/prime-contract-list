@@ -917,8 +917,10 @@ async function main() {
         console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — AI classified as permanent`);
       } else {
         const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
-        await saveJob(pendingDetail, enrichment, posterEmail);
-        await dispatchContractAlerts(pendingDetail, enrichment, alerts, proUsers);
+        const savedId = await saveJob(pendingDetail, enrichment, posterEmail);
+        dispatchContractAlerts(pendingDetail, enrichment, alerts, proUsers, savedId).catch((e) =>
+          console.warn(`  Alert dispatch error: ${(e as Error).message}`)
+        );
         processed++;
         console.log(
           `  ✓ ${pendingDetail.jobTitle} — IR35: ${enrichment.ir35Status} | ${enrichment.workingType} | ${enrichment.payRate ?? "no rate"} | ${enrichment.contractDuration ?? "no duration"}${posterEmail ? ` | ${posterEmail}` : ""}`
