@@ -17,6 +17,7 @@ const AlertsPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [newKeyword, setNewKeyword] = useState("");
+  const [duplicateError, setDuplicateError] = useState(false);
   const [cvLoading, setCvLoading] = useState(false);
   const [cvDone, setCvDone] = useState(false);
   const [cvError, setCvError] = useState(false);
@@ -65,8 +66,15 @@ const AlertsPage = () => {
   };
 
   const handleAdd = () => {
-    if (!newKeyword.trim()) return;
-    createAlert.mutate(newKeyword.trim(), { onSuccess: () => setNewKeyword("") });
+    const trimmed = newKeyword.trim();
+    if (!trimmed) return;
+    setDuplicateError(false);
+    createAlert.mutate(trimmed, {
+      onSuccess: () => { setNewKeyword(""); setDuplicateError(false); },
+      onError: (err) => {
+        if (err.message === 'duplicate') setDuplicateError(true);
+      },
+    });
   };
 
   return (
@@ -98,9 +106,9 @@ const AlertsPage = () => {
             <Input
               placeholder="Enter keywords (e.g. Azure, Python, Remote London)..."
               value={newKeyword}
-              onChange={(e) => setNewKeyword(e.target.value)}
+              onChange={(e) => { setNewKeyword(e.target.value); setDuplicateError(false); }}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              className="flex-1"
+              className={`flex-1 ${duplicateError ? "border-destructive focus-visible:ring-destructive" : ""}`}
             />
             <Button variant="hero" onClick={handleAdd} disabled={createAlert.isPending}>
               {createAlert.isPending
@@ -109,9 +117,15 @@ const AlertsPage = () => {
               }
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            You'll receive an email as soon as a matching contract is posted.
-          </p>
+          {duplicateError ? (
+            <p className="text-xs text-destructive mt-2">
+              You already have an alert for "{newKeyword.trim()}" — no duplicate created.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-2">
+              You'll receive an email as soon as a matching contract is posted.
+            </p>
+          )}
         </div>
 
         {/* CV-based alerts */}

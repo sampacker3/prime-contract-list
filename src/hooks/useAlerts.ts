@@ -24,6 +24,11 @@ export function useAlerts() {
   const createAlert = useMutation({
     mutationFn: async (keywords: string) => {
       if (!user) throw new Error('Not authenticated')
+      // Case-insensitive duplicate check
+      const isDuplicate = alerts.some(
+        (a) => a.keywords.toLowerCase() === keywords.toLowerCase()
+      )
+      if (isDuplicate) throw new Error('duplicate')
       const { error } = await supabase.from('alerts').insert({
         user_id: user.id,
         keywords,
