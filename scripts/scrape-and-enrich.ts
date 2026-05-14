@@ -299,7 +299,7 @@ Return ONLY valid JSON with these exact keys:
   "summary": "2-3 sentence summary of the role and key skills required. Do not mention the company name.",
   "ir35Status": "Inside IR35" | "Outside IR35" | "Unknown",
   "workingType": "Remote" | "Hybrid" | "Onsite" | "Unknown",
-  "payRate": "extracted pay rate string (e.g. £500-£600/day), or null if not mentioned",
+  "payRate": "a concrete numeric rate only (e.g. '£500/day', '£400-£550 per day', '£75/hr'). Return null if the rate is vague, e.g. 'competitive', 'negotiable', 'dependent on experience', 'get in touch' — anything without an actual number",
   "contractDuration": "extracted contract duration (e.g. 6 months, 12 months, ongoing), or null if not mentioned"
 }
 
