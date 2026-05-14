@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Plus, Trash2, Bell, Search, Loader2, Sparkles, CheckCircle2, PauseCircle, PlayCircle } from "lucide-react";
+import { Mail, Plus, Trash2, Bell, Search, Loader2, Sparkles, CheckCircle2, PauseCircle, PlayCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { useQueryClient } from "@tanstack/react-query";
 
 const AlertsPage = () => {
-  const { alerts, isLoading, createAlert, deleteAlert, toggleAlert, deleteAll, pauseAll } = useAlerts();
+  const { alerts, isLoading, createAlert, deleteAlert, toggleAlert, deleteAll, pauseAll, duplicateIds, deduplicateAlerts } = useAlerts();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [newKeyword, setNewKeyword] = useState("");
@@ -175,6 +175,30 @@ const AlertsPage = () => {
             </p>
           )}
         </div>
+
+        {/* Duplicate cleanup banner */}
+        {duplicateIds.length > 0 && (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 mb-6">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+              <p className="text-sm text-foreground">
+                You have <span className="font-semibold">{duplicateIds.length}</span> duplicate alert{duplicateIds.length !== 1 ? "s" : ""} — these won't send any extra emails, but you can tidy them up.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 text-xs"
+              onClick={() => deduplicateAlerts.mutate()}
+              disabled={deduplicateAlerts.isPending}
+            >
+              {deduplicateAlerts.isPending
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : "Remove duplicates"
+              }
+            </Button>
+          </div>
+        )}
 
         {/* Alert list */}
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">

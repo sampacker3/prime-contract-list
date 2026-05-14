@@ -75,5 +75,34 @@ export function useAlerts() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alerts', user?.id] }),
   })
 
-  return { alerts, isLoading, createAlert, deleteAlert, toggleAlert, deleteAll, pauseAll }
+  // Returns ids of all but the first (oldest) occurrence of each keyword
+  const duplicateIds = (() => {
+    const seen = new Map<string, number>() // lowercase keyword → first id seen
+    const dupes: number[] = []
+    // alerts are ordered newest-first; reverse so we keep the oldest
+    ;[...alerts].reverse().forEach((a) => {
+      const key = a.keywords.toLowerCase()
+      if (seen.has(key)) {
+        dupes.push(a.id)
+      } else {
+        seen.set(key, a.id)
+      }
+    })
+    return dupes
+  })()
+
+  const deduplicateAlerts = useMutation({
+    mutationFn: async () => {
+      if (!user || duplicateIds.length === 0) return
+      const { error } = await supabase
+        .from('alerts')
+        .delete()
+        .in('id', duplicateIds)
+        .eq('user_id', user.id)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['alerts', user?.id] }),
+  })
+
+  return { alerts, isLoading, createAlert, deleteAlert, toggleAlert, deleteAll, pauseAll, duplicateIds, deduplicateAlerts }
 }
