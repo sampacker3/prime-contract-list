@@ -358,6 +358,9 @@ const AccountPage = () => {
         .upload(path, file, { contentType: "application/pdf", upsert: true });
       if (uploadError) throw uploadError;
 
+      // Write filename to profiles so recruiters can discover this candidate
+      await supabase.from('profiles').update({ cv_filename: file.name }).eq('id', user.id);
+
       localStorage.setItem(`cv_filename_${user.id}`, file.name);
       setCvName(file.name);
       await queryClient.invalidateQueries({ queryKey: ["cv-exists", user.id] });
@@ -397,11 +400,12 @@ const AccountPage = () => {
     if (!user) return;
     setCvDeleting(true);
     try {
-      // Delete storage file and embeddings in parallel
+      // Delete storage file, embeddings, reviews, and clear cv_filename on profile in parallel
       await Promise.all([
         supabase.storage.from(CV_BUCKET).remove([`${user.id}/cv.pdf`]),
         supabase.from("usercvs").delete().contains("metadata", { user_id: user.id }),
         supabase.from("cv_reviews").delete().eq("user_id", user.id),
+        supabase.from("profiles").update({ cv_filename: null }).eq("id", user.id),
       ]);
       setCvReview(null);
       setCvReviewOpen(false);
@@ -929,7 +933,8 @@ const AccountPage = () => {
                 <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                 We'll email you matching contracts {notifyDaysValue} days before{' '}
                 <span className="font-medium text-foreground">
-                  {new Date(endDateValue).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {/* Append T00:00:00 to parse as local time, preventing UTC→BST off-by-one */}
+                  {new Date(`${endDateValue}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </span>, then again at 14, 7, 3, and 1 day out.
               </div>
             )}

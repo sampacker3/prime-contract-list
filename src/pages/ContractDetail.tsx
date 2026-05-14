@@ -186,6 +186,12 @@ export default function ContractDetail() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
 
+  const copyEmail = (email: string) => {
+    navigator.clipboard.writeText(email);
+    setEmailCopied(true);
+    setTimeout(() => setEmailCopied(false), 2000);
+  };
+
   // 2-second debounce before firing the CV fit API call (avoids cost on quick exits)
   const [cvFitReady, setCvFitReady] = useState(false);
   useEffect(() => {
@@ -193,23 +199,18 @@ export default function ContractDetail() {
     return () => clearTimeout(t);
   }, []);
 
-  const { hasCv } = useCVExists();
+  const queryClient = useQueryClient();
+  const { data: contract, isLoading, isError } = useContract(Number(id));
+  const { data: similarContracts = [] } = useSimilarContracts(contract);
+
+  // CV fit — must come after useContract so contract is in scope
+  const { cvExists: hasCv } = useCVExists();
   const { data: cvFit, isLoading: cvFitLoading } = useCvFit(
     contract?.id ?? null,
     contract?.JobTitle ?? null,
     contract?.Description ?? null,
     cvFitReady && hasCv
   );
-
-  const copyEmail = (email: string) => {
-    navigator.clipboard.writeText(email);
-    setEmailCopied(true);
-    setTimeout(() => setEmailCopied(false), 2000);
-  };
-
-  const queryClient = useQueryClient();
-  const { data: contract, isLoading, isError } = useContract(Number(id));
-  const { data: similarContracts = [] } = useSimilarContracts(contract);
   const isToday = contract?.created_at
     ? new Date(contract.created_at) >= new Date(new Date().setHours(0, 0, 0, 0))
     : false;
@@ -411,7 +412,7 @@ export default function ContractDetail() {
             {/* CV Fit Score — Pro users with CV only */}
             {isPro && hasCv && (
               <div className="border-b px-5 py-3 bg-primary/3">
-                {cvFitLoading || (!cvFit && cvFitReady) ? (
+                {cvFitLoading ? (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
                     Analysing your CV fit…
