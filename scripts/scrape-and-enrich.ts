@@ -553,6 +553,12 @@ function alertMatchesJob(keyword: string, job: JobDetail): boolean {
   return searchText.includes(kw);
 }
 
+function badge(label: string, green: boolean): string {
+  return green
+    ? `<td style="padding-right:6px;padding-bottom:6px;"><span style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;">${label}</span></td>`
+    : `<td style="padding-right:6px;padding-bottom:6px;"><span style="display:inline-block;background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;">${label}</span></td>`;
+}
+
 function buildAlertEmailHtml(
   keyword: string,
   job: JobDetail,
@@ -562,18 +568,17 @@ function buildAlertEmailHtml(
   const contractUrl = contractId
     ? `https://itcontracthub.co.uk/contract/${contractId}`
     : job.url;
-  const badges = [
-    enrichment.ir35Status !== "Unknown" ? enrichment.ir35Status : null,
-    enrichment.workingType !== "Unknown" ? enrichment.workingType : null,
-    enrichment.payRate,
-    enrichment.contractDuration,
-  ]
-    .filter(Boolean)
-    .map(
-      (b) =>
-        `<span style="display:inline-block;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;margin:0 4px 4px 0;">${b}</span>`
-    )
-    .join("");
+
+  const badgeCells = [
+    enrichment.ir35Status !== "Unknown" ? badge(enrichment.ir35Status, enrichment.ir35Status === "Outside IR35") : "",
+    enrichment.workingType !== "Unknown" ? badge(enrichment.workingType, false) : "",
+    enrichment.payRate                   ? badge(enrichment.payRate, true) : "",
+    enrichment.contractDuration          ? badge(enrichment.contractDuration, false) : "",
+  ].filter(Boolean).join("");
+
+  const badgesHtml = badgeCells
+    ? `<table cellpadding="0" cellspacing="0" style="margin-bottom:14px;"><tr>${badgeCells}</tr></table>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -581,84 +586,77 @@ function buildAlertEmailHtml(
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>New contract match: ${keyword}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 </head>
-<body style="margin:0;padding:0;background-color:#f4f6f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:40px 16px;">
-    <tr>
-      <td align="center">
-        <table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:580px;" cellpadding="0" cellspacing="0">
 
-          <!-- Logo -->
-          <tr>
-            <td align="center" style="padding-bottom:24px;">
-              <span style="font-size:22px;font-weight:700;color:#1d4ed8;letter-spacing:-0.5px;">IT Contract<span style="color:#0f172a;">Hub</span></span>
-            </td>
-          </tr>
+        <!-- Logo -->
+        <tr>
+          <td align="center" style="padding-bottom:28px;">
+            <span style="font-family:'Space Grotesk',Inter,sans-serif;font-size:22px;font-weight:700;color:#2563eb;letter-spacing:-0.5px;">IT Contract<span style="color:#0f172a;">Hub</span></span>
+          </td>
+        </tr>
 
-          <!-- Card -->
-          <tr>
-            <td style="background:#ffffff;border-radius:12px;padding:40px 40px 32px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+        <!-- Main card -->
+        <tr>
+          <td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;padding:40px;box-shadow:0 4px 24px -4px rgba(15,23,42,0.08);">
 
-              <!-- Icon -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding-bottom:24px;">
-                    <div style="width:48px;height:48px;background:#eff6ff;border-radius:12px;display:inline-block;line-height:48px;text-align:center;font-size:24px;">🔔</div>
-                  </td>
-                </tr>
-              </table>
+            <!-- Icon -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td align="center" style="padding-bottom:20px;">
+                <div style="width:52px;height:52px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:14px;display:inline-block;line-height:52px;text-align:center;font-size:26px;box-shadow:0 4px 12px -2px rgba(37,99,235,0.35);">🔔</div>
+              </td></tr>
+            </table>
 
-              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">New contract match</h1>
-              <p style="margin:0 0 28px;font-size:15px;color:#64748b;text-align:center;line-height:1.6;">
-                A new contract matching your alert for <strong style="color:#1d4ed8;">${keyword}</strong> has just been posted.
-              </p>
+            <h1 style="margin:0 0 8px;font-family:'Space Grotesk',Inter,sans-serif;font-size:24px;font-weight:700;color:#0f172a;text-align:center;letter-spacing:-0.3px;">New contract match</h1>
+            <p style="margin:0 0 28px;font-size:15px;color:#64748b;text-align:center;line-height:1.6;">
+              A new contract matching your alert for <strong style="color:#2563eb;font-weight:600;">${keyword}</strong> has just been posted.
+            </p>
 
-              <!-- Contract card -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;background:#f8fafc;padding:0;margin-bottom:24px;">
-                <tr>
-                  <td style="padding:20px;">
-                    <p style="margin:0 0 4px;font-size:17px;font-weight:700;color:#0f172a;">${job.jobTitle}</p>
-                    <p style="margin:0 0 12px;font-size:14px;color:#64748b;">${job.company} &middot; ${job.location}</p>
-                    ${badges ? `<div style="margin-bottom:${enrichment.summary ? "12px" : "0"};">${badges}</div>` : ""}
-                    ${enrichment.summary ? `<p style="margin:0;font-size:14px;color:#475569;line-height:1.6;">${enrichment.summary}</p>` : ""}
-                  </td>
-                </tr>
-              </table>
+            <!-- Contract card -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:24px;">
+              <tr><td style="padding:20px 22px;">
+                <p style="margin:0 0 4px;font-family:'Space Grotesk',Inter,sans-serif;font-size:17px;font-weight:600;color:#0f172a;line-height:1.3;">${job.jobTitle}</p>
+                <p style="margin:0 0 14px;font-size:13px;color:#64748b;">${job.company} &nbsp;&middot;&nbsp; ${job.location}</p>
+                ${badgesHtml}
+                ${enrichment.summary ? `<p style="margin:0;font-size:13px;color:#475569;line-height:1.65;">${enrichment.summary}</p>` : ""}
+              </td></tr>
+            </table>
 
-              <!-- CTA -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding-bottom:28px;">
-                    <a href="${contractUrl}"
-                       style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#ffffff;font-family:Space Grotesk,Inter,sans-serif;font-size:15px;font-weight:600;text-decoration:none;padding:13px 36px;border-radius:10px;letter-spacing:0.1px;box-shadow:0 4px 14px -2px rgba(37,99,235,0.4);">
-                      View contract &rarr;
-                    </a>
-                  </td>
-                </tr>
-              </table>
+            <!-- CTA -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td align="center" style="padding-bottom:28px;">
+                <a href="${contractUrl}"
+                   style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#ffffff;font-family:'Space Grotesk',Inter,sans-serif;font-size:15px;font-weight:600;text-decoration:none;padding:13px 36px;border-radius:10px;letter-spacing:0.1px;box-shadow:0 4px 14px -2px rgba(37,99,235,0.4);">
+                  View contract &rarr;
+                </a>
+              </td></tr>
+            </table>
 
-              <p style="margin:0;font-size:13px;color:#94a3b8;text-align:center;">
-                You're receiving this because you have an alert set up for <strong>${keyword}</strong>.
-              </p>
+            <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.5;">
+              You're receiving this because you have an alert set up for <strong style="color:#64748b;">${keyword}</strong>.
+            </p>
 
-            </td>
-          </tr>
+          </td>
+        </tr>
 
-          <!-- Footer -->
-          <tr>
-            <td style="padding:24px 0 0;text-align:center;">
-              <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;">
-                <a href="https://itcontracthub.co.uk/alerts" style="color:#94a3b8;text-decoration:underline;">Manage alerts</a>
-                &nbsp;&middot;&nbsp;
-                <a href="https://itcontracthub.co.uk" style="color:#94a3b8;text-decoration:none;">itcontracthub.co.uk</a>
-              </p>
-              <p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">&copy; 2025 IT ContractHub</p>
-            </td>
-          </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="padding:24px 0 0;text-align:center;">
+            <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">
+              <a href="https://itcontracthub.co.uk/alerts" style="color:#94a3b8;text-decoration:underline;">Manage alerts</a>
+              &nbsp;&middot;&nbsp;
+              <a href="https://itcontracthub.co.uk" style="color:#94a3b8;text-decoration:none;">itcontracthub.co.uk</a>
+            </p>
+            <p style="margin:4px 0 0;font-size:12px;color:#cbd5e1;">&copy; 2025 IT ContractHub</p>
+          </td>
+        </tr>
 
-        </table>
-      </td>
-    </tr>
+      </table>
+    </td></tr>
   </table>
 </body>
 </html>`;
