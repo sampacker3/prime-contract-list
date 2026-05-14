@@ -556,8 +556,12 @@ function alertMatchesJob(keyword: string, job: JobDetail): boolean {
 function buildAlertEmailHtml(
   keyword: string,
   job: JobDetail,
-  enrichment: Enrichment
+  enrichment: Enrichment,
+  contractId: number | null
 ): string {
+  const contractUrl = contractId
+    ? `https://itcontracthub.co.uk/contract/${contractId}`
+    : job.url;
   const badges = [
     enrichment.ir35Status !== "Unknown" ? enrichment.ir35Status : null,
     enrichment.workingType !== "Unknown" ? enrichment.workingType : null,
@@ -625,8 +629,8 @@ function buildAlertEmailHtml(
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom:28px;">
-                    <a href="${job.url}"
-                       style="display:inline-block;background:#1d4ed8;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:13px 32px;border-radius:8px;letter-spacing:0.1px;">
+                    <a href="${contractUrl}"
+                       style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#ffffff;font-family:Space Grotesk,Inter,sans-serif;font-size:15px;font-weight:600;text-decoration:none;padding:13px 36px;border-radius:10px;letter-spacing:0.1px;box-shadow:0 4px 14px -2px rgba(37,99,235,0.4);">
                       View contract &rarr;
                     </a>
                   </td>
@@ -664,7 +668,8 @@ async function dispatchContractAlerts(
   job: JobDetail,
   enrichment: Enrichment,
   alerts: AlertRow[],
-  proUsers: Map<string, string> // user_id → email
+  proUsers: Map<string, string>, // user_id → email
+  contractId: number | null
 ): Promise<void> {
   if (!resend || !alerts.length) return;
 
@@ -680,7 +685,7 @@ async function dispatchContractAlerts(
         from: "IT ContractHub <alerts@itcontracthub.co.uk>",
         to: [email],
         subject: `New contract match: ${alert.keywords}`,
-        html: buildAlertEmailHtml(alert.keywords, job, enrichment),
+        html: buildAlertEmailHtml(alert.keywords, job, enrichment, contractId),
       });
       console.log(`  📧 Alert sent to ${email} for "${alert.keywords}"`);
 
@@ -702,13 +707,13 @@ async function saveJob(
   detail: JobDetail,
   enrichment: Enrichment,
   posterEmail: string | null
-): Promise<void> {
+): Promise<number | null> {
   if (DRY_RUN) {
     console.log(`  [DRY RUN] Would save: ${detail.jobTitle}${posterEmail ? ` | email: ${posterEmail}` : ""}`);
-    return;
+    return null;
   }
 
-  const { error } = await supabase.from("LinkedinScrapeResults").insert({
+  const { data, error } = await supabase.from("LinkedinScrapeResults").insert({
     PostedDate: detail.postingDate,
     JobTitle: detail.jobTitle,
     URL: detail.url,
@@ -725,9 +730,10 @@ async function saveJob(
     PosterName: detail.posterName,
     PosterEmail: posterEmail,
     CompanyLinkedInURL: detail.companyUrl,
-  });
+  }).select("id").single();
 
   if (error) throw new Error(error.message);
+  return (data as { id: number } | null)?.id ?? null;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -853,8 +859,8 @@ async function main() {
           console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — AI classified as permanent`);
         } else {
           const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
-          await saveJob(pendingDetail, enrichment, posterEmail);
-          dispatchContractAlerts(pendingDetail, enrichment, alerts, proUsers).catch((e) =>
+          const savedId = await saveJob(pendingDetail, enrichment, posterEmail);
+          dispatchContractAlerts(pendingDetail, enrichment, alerts, proUsers, savedId).catch((e) =>
             console.warn(`  Alert dispatch error: ${(e as Error).message}`)
           );
           processed++;
