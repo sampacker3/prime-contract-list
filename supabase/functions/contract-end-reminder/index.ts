@@ -145,10 +145,18 @@ Deno.serve(async (req) => {
     // Find all users whose contract ends within their notify window
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, email, full_name, contract_end_date, contract_end_notify_days')
+      .select('id, full_name, contract_end_date, contract_end_notify_days')
       .not('contract_end_date', 'is', null)
 
     if (profilesError) throw profilesError
+
+    // Build email map from auth.users (profiles table does not store email)
+    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+    if (authUsersError) throw authUsersError
+    const emailMap = new Map<string, string>()
+    for (const u of authUsers.users) {
+      if (u.email) emailMap.set(u.id, u.email)
+    }
 
     let emailsSent = 0
 
@@ -192,7 +200,7 @@ Deno.serve(async (req) => {
         })
         .slice(0, 5)
 
-      const email = profile.email
+      const email = emailMap.get(profile.id)
       if (!email) continue
 
       const html = buildEmailHtml(

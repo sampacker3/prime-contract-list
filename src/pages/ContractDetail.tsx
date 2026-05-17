@@ -193,11 +193,13 @@ export default function ContractDetail() {
   };
 
   // 2-second debounce before firing the CV fit API call (avoids cost on quick exits)
+  // Reset whenever the contract id changes (same component reused by React Router)
   const [cvFitReady, setCvFitReady] = useState(false);
   useEffect(() => {
+    setCvFitReady(false);
     const t = setTimeout(() => setCvFitReady(true), 2000);
     return () => clearTimeout(t);
-  }, []);
+  }, [id]);
 
   const queryClient = useQueryClient();
   const { data: contract, isLoading, isError } = useContract(Number(id));
