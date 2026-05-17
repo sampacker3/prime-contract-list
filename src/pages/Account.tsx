@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from "react";
-import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle, LogOut, FileText, Upload, Trash2, Download, Loader2, Lock, Eye, EyeOff, CalendarDays, Info, Sparkles, MapPin, Building2, ArrowRight, BellRing, CheckCircle2, AlertCircle as AlertCircleIcon, Zap } from "lucide-react";
+import { User, CreditCard, Mail, Settings, ExternalLink, CheckCircle, LogOut, FileText, Upload, Trash2, Download, Loader2, Lock, Eye, EyeOff, CalendarDays, Info, Sparkles, MapPin, Building2, ArrowRight, CheckCircle2, AlertCircle as AlertCircleIcon, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle } from "lucide-react";
@@ -24,8 +24,7 @@ type Profile = {
   subscription_renews_at: string | null
   stripe_customer_id: string | null
   full_name: string | null
-  contract_end_date: string | null
-  contract_end_notify_days: number | null
+
 }
 
 type CvReview = {
@@ -66,7 +65,7 @@ const AccountPage = () => {
       // maybeSingle returns null instead of throwing when no row exists
       const { data } = await supabase
         .from('profiles')
-        .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id, full_name, contract_end_date, contract_end_notify_days')
+        .select('subscription_plan, subscription_active, subscription_renews_at, stripe_customer_id, full_name')
         .eq('id', user!.id)
         .maybeSingle();
 
@@ -139,37 +138,8 @@ const AccountPage = () => {
   const [cvChecking, setCvChecking] = useState(true);
 
   // Contract end date
-  const [endDateValue, setEndDateValue] = useState("");
-  const [notifyDaysValue, setNotifyDaysValue] = useState("30");
-  const [endDateSaving, setEndDateSaving] = useState(false);
-  const [endDateSaved, setEndDateSaved] = useState(false);
 
   // Populate end date from profile once loaded
-  useEffect(() => {
-    if (profile?.contract_end_date) setEndDateValue(profile.contract_end_date);
-    if (profile?.contract_end_notify_days) setNotifyDaysValue(String(profile.contract_end_notify_days));
-  }, [profile?.contract_end_date, profile?.contract_end_notify_days]);
-
-  const handleSaveEndDate = async () => {
-    if (!user) return;
-    setEndDateSaving(true);
-    await supabase.from('profiles').update({
-      contract_end_date: endDateValue || null,
-      contract_end_notify_days: Number(notifyDaysValue),
-    }).eq('id', user.id);
-    await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
-    setEndDateSaving(false);
-    setEndDateSaved(true);
-    setTimeout(() => setEndDateSaved(false), 2500);
-  };
-
-  const handleClearEndDate = async () => {
-    if (!user) return;
-    setEndDateValue("");
-    await supabase.from('profiles').update({ contract_end_date: null }).eq('id', user.id);
-    await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
-  };
-
   // CV Review
   const [cvReview, setCvReview] = useState<CvReview | null>(null);
   const [cvReviewLoading, setCvReviewLoading] = useState(false);
@@ -866,79 +836,6 @@ const AccountPage = () => {
               )}
             </div>
           )}
-        </div>
-
-        {/* Contract end date reminder */}
-        <div className="rounded-xl border bg-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-primary">
-              <BellRing className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-heading font-semibold text-foreground">Contract End Reminder</h2>
-              <p className="text-sm text-muted-foreground">Get notified before your contract ends with matching roles</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Current contract end date</label>
-                <input
-                  type="date"
-                  value={endDateValue}
-                  onChange={e => setEndDateValue(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">Notify me this many days before</label>
-                <select
-                  value={notifyDaysValue}
-                  onChange={e => setNotifyDaysValue(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="14">14 days before</option>
-                  <option value="21">21 days before</option>
-                  <option value="30">30 days before</option>
-                  <option value="45">45 days before</option>
-                  <option value="60">60 days before</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="hero"
-                size="sm"
-                onClick={handleSaveEndDate}
-                disabled={endDateSaving || !endDateValue}
-              >
-                {endDateSaving
-                  ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving…</>
-                  : endDateSaved
-                    ? <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-green-400" /> Saved!</>
-                    : <><BellRing className="h-3.5 w-3.5 mr-1.5" /> Save Reminder</>
-                }
-              </Button>
-              {endDateValue && (
-                <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleClearEndDate}>
-                  Clear
-                </Button>
-              )}
-            </div>
-
-            {endDateValue && (
-              <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2.5">
-                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                We'll email you matching contracts {notifyDaysValue} days before{' '}
-                <span className="font-medium text-foreground">
-                  {/* Append T00:00:00 to parse as local time, preventing UTC→BST off-by-one */}
-                  {new Date(`${endDateValue}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                </span>, then again at 14, 7, 3, and 1 day out.
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Subscription card */}

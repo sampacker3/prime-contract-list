@@ -1,17 +1,9 @@
 -- ============================================================
--- CV Fit, CV Review & Contract End Date Migration
+-- CV Fit & CV Review Migration
 -- Run in Supabase SQL editor
 -- ============================================================
 
--- 1. Contract end date on profiles
-ALTER TABLE profiles
-  ADD COLUMN IF NOT EXISTS contract_end_date date DEFAULT NULL;
-
-ALTER TABLE profiles
-  ADD COLUMN IF NOT EXISTS contract_end_notify_days int DEFAULT 30;
-
-
--- 2. CV fit score cache
+-- 1. CV fit score cache
 -- Caches per user+contract so repeat visits are free (7-day TTL enforced in app)
 CREATE TABLE IF NOT EXISTS cv_fit_cache (
   id            bigserial PRIMARY KEY,
@@ -31,7 +23,7 @@ CREATE POLICY "Users manage own cv fit cache"
   WITH CHECK (user_id = auth.uid());
 
 
--- 3. CV reviews
+-- 2. CV reviews
 -- One review per user, replaced on each regeneration, deleted when CV is deleted
 CREATE TABLE IF NOT EXISTS cv_reviews (
   id          bigserial PRIMARY KEY,
