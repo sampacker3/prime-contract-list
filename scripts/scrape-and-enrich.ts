@@ -662,39 +662,171 @@ function buildAlertEmailHtml(
 </html>`;
 }
 
-async function dispatchContractAlerts(
+// ── Alert digest ─────────────────────────────────────────────────────────────
+// Matches are collected during the run, then one digest email is sent per user.
+
+interface AlertMatch {
+  keyword: string;
+  alert: AlertRow;
+  job: JobDetail;
+  enrichment: Enrichment;
+  contractId: number | null;
+}
+
+function collectAlertMatches(
   job: JobDetail,
   enrichment: Enrichment,
   alerts: AlertRow[],
-  proUsers: Map<string, string>, // user_id → email
-  contractId: number | null
-): Promise<void> {
+  contractId: number | null,
+  bucket: Map<string, AlertMatch[]> // user_id → matches
+): void {
   if (!resend || !alerts.length) return;
 
-  const matching = alerts.filter((a) => alertMatchesJob(a.keywords, job));
-  if (!matching.length) return;
+  for (const alert of alerts) {
+    if (!alertMatchesJob(alert.keywords, job)) continue;
+    const existing = bucket.get(alert.user_id) ?? [];
+    existing.push({ keyword: alert.keywords, alert, job, enrichment, contractId });
+    bucket.set(alert.user_id, existing);
+  }
+}
 
-  for (const alert of matching) {
-    const email = proUsers.get(alert.user_id);
-    if (!email) continue;
+function buildContractCard(match: AlertMatch): string {
+  const contractUrl = match.contractId
+    ? `https://itcontracthub.co.uk/contract/${match.contractId}`
+    : match.job.url;
+
+  const badgeCells = [
+    match.enrichment.ir35Status !== "Unknown" ? badge(match.enrichment.ir35Status, match.enrichment.ir35Status === "Outside IR35") : "",
+    match.enrichment.workingType !== "Unknown" ? badge(match.enrichment.workingType, false) : "",
+    match.enrichment.payRate        ? badge(match.enrichment.payRate, true) : "",
+    match.enrichment.contractDuration ? badge(match.enrichment.contractDuration, false) : "",
+  ].filter(Boolean).join("");
+
+  const badgesHtml = badgeCells
+    ? `<table cellpadding="0" cellspacing="0" style="margin-bottom:12px;"><tr>${badgeCells}</tr></table>`
+    : "";
+
+  return `
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:16px;">
+      <tr><td style="padding:18px 20px;">
+        <p style="margin:0 0 2px;font-size:11px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:0.5px;">${match.keyword}</p>
+        <p style="margin:0 0 4px;font-family:'Space Grotesk',Inter,sans-serif;font-size:16px;font-weight:600;color:#0f172a;line-height:1.3;">${match.job.jobTitle}</p>
+        <p style="margin:0 0 12px;font-size:13px;color:#64748b;">${match.job.company} &nbsp;&middot;&nbsp; ${match.job.location}</p>
+        ${badgesHtml}
+        ${match.enrichment.summary ? `<p style="margin:0 0 14px;font-size:13px;color:#475569;line-height:1.6;">${match.enrichment.summary}</p>` : ""}
+        <a href="${contractUrl}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#ffffff;font-family:'Space Grotesk',Inter,sans-serif;font-size:13px;font-weight:600;text-decoration:none;padding:9px 20px;border-radius:8px;">View contract &rarr;</a>
+      </td></tr>
+    </table>`;
+}
+
+function buildDigestEmailHtml(matches: AlertMatch[]): string {
+  const count = matches.length;
+  const heading = count === 1 ? "1 new contract match" : `${count} new contract matches`;
+  const keywords = [...new Set(matches.map((m) => m.keyword))];
+  const keywordList = keywords.map((k) => `<strong style="color:#2563eb;">${k}</strong>`).join(", ");
+
+  const cards = matches.map(buildContractCard).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>${heading}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:580px;" cellpadding="0" cellspacing="0">
+
+        <!-- Logo -->
+        <tr>
+          <td align="center" style="padding-bottom:28px;">
+            <span style="font-family:'Space Grotesk',Inter,sans-serif;font-size:22px;font-weight:700;color:#2563eb;letter-spacing:-0.5px;">IT Contract<span style="color:#0f172a;">Hub</span></span>
+          </td>
+        </tr>
+
+        <!-- Main card -->
+        <tr>
+          <td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;padding:40px;box-shadow:0 4px 24px -4px rgba(15,23,42,0.08);">
+
+            <!-- Icon -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr><td align="center" style="padding-bottom:20px;">
+                <div style="width:52px;height:52px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:14px;display:inline-block;line-height:52px;text-align:center;font-size:26px;box-shadow:0 4px 12px -2px rgba(37,99,235,0.35);">🔔</div>
+              </td></tr>
+            </table>
+
+            <h1 style="margin:0 0 8px;font-family:'Space Grotesk',Inter,sans-serif;font-size:24px;font-weight:700;color:#0f172a;text-align:center;letter-spacing:-0.3px;">${heading}</h1>
+            <p style="margin:0 0 28px;font-size:15px;color:#64748b;text-align:center;line-height:1.6;">
+              New contracts matching your alerts for ${keywordList}.
+            </p>
+
+            <!-- Contract cards -->
+            ${cards}
+
+            <p style="margin:8px 0 0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.5;">
+              You're receiving this because you have contract alerts set up on IT ContractHub.
+            </p>
+
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:24px 0 0;text-align:center;">
+            <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">
+              <a href="https://itcontracthub.co.uk/alerts" style="color:#94a3b8;text-decoration:underline;">Manage alerts</a>
+              &nbsp;&middot;&nbsp;
+              <a href="https://itcontracthub.co.uk" style="color:#94a3b8;text-decoration:none;">itcontracthub.co.uk</a>
+            </p>
+            <p style="margin:4px 0 0;font-size:12px;color:#cbd5e1;">&copy; 2025 IT ContractHub</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function sendDigestEmails(
+  bucket: Map<string, AlertMatch[]>,
+  proUsers: Map<string, string>
+): Promise<void> {
+  if (!resend || !bucket.size) return;
+
+  for (const [userId, matches] of bucket) {
+    const email = proUsers.get(userId);
+    if (!email || !matches.length) continue;
+
+    const count = matches.length;
+    const keywords = [...new Set(matches.map((m) => m.keyword))];
+    const subject = count === 1
+      ? `New contract match: ${keywords[0]}`
+      : `${count} new contract matches for you`;
 
     try {
       await resend.emails.send({
         from: "IT ContractHub <alerts@itcontracthub.co.uk>",
         to: [email],
-        subject: `New contract match: ${alert.keywords}`,
-        html: buildAlertEmailHtml(alert.keywords, job, enrichment, contractId),
+        subject,
+        html: buildDigestEmailHtml(matches),
       });
-      console.log(`  📧 Alert sent to ${email} for "${alert.keywords}"`);
+      console.log(`  📧 Digest sent to ${email} — ${count} contract(s) matching: ${keywords.join(", ")}`);
 
-      // Increment match_count in DB and in memory
-      await supabase
-        .from("alerts")
-        .update({ match_count: alert.match_count + 1 })
-        .eq("id", alert.id);
-      alert.match_count++;
+      // Increment match_count for each alert
+      for (const { alert } of matches) {
+        await supabase
+          .from("alerts")
+          .update({ match_count: alert.match_count + 1 })
+          .eq("id", alert.id);
+        alert.match_count++;
+      }
     } catch (err) {
-      console.warn(`  Alert email failed: ${(err as Error).message}`);
+      console.warn(`  Digest email failed for ${email}: ${(err as Error).message}`);
     }
   }
 }
@@ -805,6 +937,9 @@ async function main() {
     }
   }
 
+  // Alert digest bucket — filled during the run, flushed at the end
+  const alertBucket = new Map<string, AlertMatch[]>(); // user_id → matches
+
   // Collect all new job cards across all search terms first
   const allNewJobs: JobCard[] = [];
 
@@ -858,9 +993,7 @@ async function main() {
         } else {
           const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
           const savedId = await saveJob(pendingDetail, enrichment, posterEmail);
-          dispatchContractAlerts(pendingDetail, enrichment, alerts, proUsers, savedId).catch((e) =>
-            console.warn(`  Alert dispatch error: ${(e as Error).message}`)
-          );
+          collectAlertMatches(pendingDetail, enrichment, alerts, savedId, alertBucket);
           processed++;
           console.log(
             `  ✓ ${pendingDetail.jobTitle} — IR35: ${enrichment.ir35Status} | ${enrichment.workingType} | ${enrichment.payRate ?? "no rate"} | ${enrichment.contractDuration ?? "no duration"}${posterEmail ? ` | ${posterEmail}` : ""}`
@@ -931,6 +1064,9 @@ async function main() {
       failed++;
     }
   }
+
+  // Send one digest email per user with all their matches for this run
+  await sendDigestEmails(alertBucket, proUsers);
 
   console.log(`\nDone. ${processed} saved, ${failed} failed.`);
 }
