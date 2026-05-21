@@ -30,46 +30,63 @@ async function searchContracts(params: SearchContractsParams): Promise<ContractR
     auth: { autoRefreshToken: false, persistSession: false },
   })
 
-  let query = supabase
+  const limit = Math.min(params.limit ?? 5, 5)
+  // Fetch a larger pool so deduplication still yields enough unique results
+  const fetchSize = limit * 4
+
+  // --- Pass 1: JobTitle matches (highest relevance) ---
+  let titleQuery = supabase
     .from('LinkedinScrapeResults')
     .select('id, JobTitle, Company, Location, PayRate, IR35Status')
     .order('created_at', { ascending: false })
+    .limit(fetchSize)
 
-  if (params.keywords) {
-    // Search across JobTitle and Description using ilike
-    const kw = `%${params.keywords}%`
-    query = query.or(`JobTitle.ilike.${kw},Description.ilike.${kw}`)
+  if (params.keywords) titleQuery = titleQuery.ilike('JobTitle', `%${params.keywords}%`)
+  if (params.location) titleQuery = titleQuery.ilike('Location', `%${params.location}%`)
+  if (params.ir35_status) titleQuery = titleQuery.ilike('IR35Status', `%${params.ir35_status}%`)
+
+  const { data: titleMatches } = await titleQuery
+  const titleResults = (titleMatches ?? []) as ContractResult[]
+
+  // --- Dedup helper ---
+  const seen = new Set<string>()
+  const deduped: ContractResult[] = []
+  const addResult = (c: ContractResult) => {
+    const key = `${(c.JobTitle ?? '').toLowerCase().trim()}|${(c.Company ?? '').toLowerCase().trim()}`
+    if (!seen.has(key)) { seen.add(key); deduped.push(c) }
   }
+  titleResults.forEach(addResult)
+  if (deduped.length >= limit) return deduped.slice(0, limit)
 
-  if (params.location) {
-    query = query.ilike('Location', `%${params.location}%`)
-  }
+  // --- Pass 2: Description matches to fill remaining slots ---
+  const allFoundIds = titleResults.map(c => c.id)
 
-  if (params.ir35_status) {
-    query = query.ilike('IR35Status', `%${params.ir35_status}%`)
-  }
+  let descQuery = supabase
+    .from('LinkedinScrapeResults')
+    .select('id, JobTitle, Company, Location, PayRate, IR35Status')
+    .order('created_at', { ascending: false })
+    .limit(fetchSize)
 
-  const limit = Math.min(params.limit ?? 5, 5)
-  query = query.limit(limit)
+  if (params.keywords) descQuery = descQuery.ilike('Description', `%${params.keywords}%`)
+  if (params.location) descQuery = descQuery.ilike('Location', `%${params.location}%`)
+  if (params.ir35_status) descQuery = descQuery.ilike('IR35Status', `%${params.ir35_status}%`)
+  if (allFoundIds.length) descQuery = descQuery.not('id', 'in', `(${allFoundIds.join(',')})`)
 
-  const { data, error } = await query
+  const { data: descMatches } = await descQuery
+  ;(descMatches ?? [] as ContractResult[]).forEach(c => addResult(c as ContractResult))
 
-  if (error) {
-    console.error('searchContracts error:', error)
-    return []
-  }
-
-  return (data ?? []) as ContractResult[]
+  return deduped.slice(0, limit)
 }
 
 const SYSTEM_PROMPT = `You are a friendly and knowledgeable UK IT contract job assistant for IT ContractHub.
 You help contractors find relevant IT contract roles in the UK.
 
-When a user asks you to find, search, show, or list contracts or roles, always use the search_contracts tool to fetch real data from the database.
-When presenting results, be concise and helpful. Mention key details like pay rate and IR35 status.
-If no results are found, suggest broadening the search or trying different keywords.
+When a user asks you to find, search, show, or list contracts or roles, ALWAYS use the search_contracts tool.
+Use specific, precise keywords when calling search_contracts — e.g. if the user says "fabric" or "Microsoft Fabric", search for "Microsoft Fabric". If they say "React", search "React". Do not shorten or generalise the keyword.
+When presenting results, be concise. List each contract with its title, company, location, pay rate and IR35 status.
+If no results are found with a specific term, try a shorter/broader keyword in a follow-up search before giving up.
 
-You understand UK contracting concepts like IR35, day rates, inside/outside IR35, umbrella companies, and Ltd company contracts.
+You understand UK contracting: IR35, day rates, inside/outside IR35, umbrella companies, Ltd company contracts, PAYE.
 Keep responses friendly, concise and professional. Use British English spelling.`
 
 const TOOLS = [
