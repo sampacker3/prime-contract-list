@@ -38,6 +38,7 @@ import Privacy from "./pages/Privacy.tsx";
 import DayRates from "./pages/DayRates.tsx";
 import IR35Calculator from "./pages/IR35Calculator.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import ChatWidget from "./components/ChatWidget.tsx";
 
 // Recruiter portal pages
 import RecruiterSignup from "./pages/recruiter/RecruiterSignup.tsx";
@@ -115,6 +116,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <ChatWidget />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
