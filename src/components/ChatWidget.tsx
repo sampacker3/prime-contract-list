@@ -121,13 +121,13 @@ export default function ChatWidget() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
 
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+        apikey: anonKey,
+        // Always send Authorization — use user JWT if logged in, anon key otherwise
+        Authorization: `Bearer ${token ?? anonKey}`,
       };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
 
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/chat-assistant`,
