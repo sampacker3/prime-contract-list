@@ -443,7 +443,6 @@ export default function ContractDetail() {
                     </div>
                     {/* Summary */}
                     <p className="text-xs text-muted-foreground flex-1 min-w-0">{cvFit.summary}</p>
-                    <span className="text-[10px] text-muted-foreground/50 shrink-0">AI</span>
                   </div>
                 ) : null}
               </div>
