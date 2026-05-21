@@ -179,25 +179,27 @@ Deno.serve(async (req) => {
     const firstChoice = firstJson.choices?.[0]
     const assistantMessage = firstChoice?.message
 
-    // Check if there's a tool call
+    // Check if there are tool calls (AI may call search_contracts multiple times e.g. "sql AND azure")
     if (firstChoice?.finish_reason === 'tool_calls' && assistantMessage?.tool_calls?.length) {
-      const toolCall = assistantMessage.tool_calls[0]
-      const toolName = toolCall.function.name
-      const toolArgs: SearchContractsParams = JSON.parse(toolCall.function.arguments ?? '{}')
+      const allContracts: ContractResult[] = []
+      const toolMessages: { role: string; tool_call_id: string; content: string }[] = []
 
-      let contracts: ContractResult[] = []
-      let toolResult = ''
-
-      if (toolName === 'search_contracts') {
-        contracts = await searchContracts(toolArgs)
-        if (contracts.length === 0) {
-          toolResult = 'No contracts found matching those criteria.'
-        } else {
-          toolResult = JSON.stringify(contracts)
+      // Execute every tool call and collect results + response messages
+      for (const toolCall of assistantMessage.tool_calls) {
+        let toolResult = ''
+        if (toolCall.function.name === 'search_contracts') {
+          const toolArgs: SearchContractsParams = JSON.parse(toolCall.function.arguments ?? '{}')
+          const results = await searchContracts(toolArgs)
+          // Merge into allContracts, deduping by id
+          for (const c of results) {
+            if (!allContracts.find(x => x.id === c.id)) allContracts.push(c)
+          }
+          toolResult = results.length > 0 ? JSON.stringify(results) : 'No contracts found matching those criteria.'
         }
+        toolMessages.push({ role: 'tool', tool_call_id: toolCall.id, content: toolResult })
       }
 
-      // Second OpenAI call with tool result
+      // Second OpenAI call — must include a tool message for EVERY tool_call_id
       const secondRes = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -210,11 +212,7 @@ Deno.serve(async (req) => {
             { role: 'system', content: SYSTEM_PROMPT },
             ...messages,
             assistantMessage,
-            {
-              role: 'tool',
-              tool_call_id: toolCall.id,
-              content: toolResult,
-            },
+            ...toolMessages,
           ],
           temperature: 0.7,
           max_tokens: 600,
@@ -230,7 +228,7 @@ Deno.serve(async (req) => {
       const finalMessage = secondJson.choices?.[0]?.message?.content ?? 'Sorry, I could not generate a response.'
 
       return new Response(
-        JSON.stringify({ message: finalMessage, contracts }),
+        JSON.stringify({ message: finalMessage, contracts: allContracts }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
