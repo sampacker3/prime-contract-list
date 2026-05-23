@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
@@ -80,6 +81,7 @@ function AssistantAvatar() {
 
 export default function ChatWidget() {
   const location = useLocation();
+  const { user, isPro, proLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -103,7 +105,8 @@ export default function ChatWidget() {
   }, [isOpen]);
 
   // Hide on recruiter pages (after all hooks)
-  if (isRecruiterPage) return null;
+  // Only show for Pro paying users — hide on recruiter pages, for non-users, and during load
+  if (isRecruiterPage || proLoading || !user || !isPro) return null;
 
   const hasUnread = !isOpen && messages.length > 0;
 

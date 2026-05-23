@@ -128,20 +128,27 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    // Optional auth — chat is open to all, but we validate if header is present
+    // Require a valid authenticated Pro user
     const authHeader = req.headers.get('Authorization')
-    if (authHeader) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { autoRefreshToken: false, persistSession: false },
-      })
-      const { error: authError } = await supabase.auth.getUser(
-        authHeader.replace('Bearer ', '')
-      )
-      // We don't block on auth failure — just log it
-      if (authError) {
-        console.warn('Auth validation failed (non-blocking):', authError.message)
-      }
-    }
+    if (!authHeader) throw new Error('Unauthorised')
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    )
+    if (authError || !user) throw new Error('Unauthorised')
+
+    // Check Pro subscription
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_active')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.subscription_active) throw new Error('Pro subscription required')
 
     const body = await req.json()
     const messages: { role: string; content: string }[] = body.messages ?? []
