@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark, FileText, ChevronRight, Mail, Copy, Check, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark, FileText, ChevronRight, Mail, Copy, Check, Sparkles, Loader2, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { useCvFit } from "@/hooks/useCvFit";
 import { useCVExists } from "@/hooks/useCVExists";
 import ApplyWithAIButton from "@/components/ApplyWithAIButton";
@@ -334,8 +334,28 @@ export default function ContractDetail() {
                   <>
                     {contract.Company && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 shrink-0" />{contract.Company}</span>}
                     {contract.Location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 shrink-0" />{contract.Location}</span>}
-                    {contract.IR35Status && <span>{contract.IR35Status}</span>}
-                    {contract.WorkType && <span>{contract.WorkType}</span>}
+                    {contract.IR35Status && (() => {
+                      const s = contract.IR35Status;
+                      const isOutside = s?.toLowerCase().includes('outside');
+                      const isInside = s?.toLowerCase().includes('inside');
+                      return (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border ${
+                          isOutside
+                            ? 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400'
+                            : isInside
+                              ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
+                              : 'bg-muted border-border text-muted-foreground'
+                        }`}>
+                          {isOutside ? <ShieldCheck className="h-3 w-3" /> : isInside ? <ShieldAlert className="h-3 w-3" /> : <ShieldQuestion className="h-3 w-3" />}
+                          {isOutside ? 'Outside IR35' : isInside ? 'Inside IR35' : 'Unknown IR35'}
+                        </span>
+                      );
+                    })()}
+                    {contract.WorkType && (
+                      <span className="inline-flex items-center gap-1">
+                        <Briefcase className="h-3.5 w-3.5 shrink-0" />{contract.WorkType}
+                      </span>
+                    )}
                   </>
                 ) : (
                   <span className="blur-sm select-none opacity-50">████████ Ltd · London, UK · Contract</span>

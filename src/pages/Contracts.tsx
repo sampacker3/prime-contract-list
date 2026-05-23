@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock, Sparkles, X } from "lucide-react";
+import { Search, MapPin, Clock, ChevronDown, Bookmark, Loader2, ChevronUp, ArrowRight, Lock, Sparkles, X, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { useCVExists } from "@/hooks/useCVExists";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -490,9 +490,28 @@ const ContractsPage = () => {
                               {contract.EmploymentType && (
                                 <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{contract.EmploymentType}</span>
                               )}
-                              {contract.IR35Status && (
-                                <span>{contract.IR35Status}</span>
-                              )}
+                              {contract.IR35Status && (() => {
+                                const s = contract.IR35Status;
+                                const isOutside = s?.toLowerCase().includes('outside');
+                                const isInside = s?.toLowerCase().includes('inside');
+                                return (
+                                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border ${
+                                    isOutside
+                                      ? 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400'
+                                      : isInside
+                                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
+                                        : 'bg-muted border-border text-muted-foreground'
+                                  }`}>
+                                    {isOutside
+                                      ? <ShieldCheck className="h-3 w-3" />
+                                      : isInside
+                                        ? <ShieldAlert className="h-3 w-3" />
+                                        : <ShieldQuestion className="h-3 w-3" />
+                                    }
+                                    {isOutside ? 'Outside IR35' : isInside ? 'Inside IR35' : 'Unknown IR35'}
+                                  </span>
+                                );
+                              })()}
                               {isPro && contract.PayRate && (
                                 <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
                                   {contract.PayRate}
