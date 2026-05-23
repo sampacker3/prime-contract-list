@@ -871,10 +871,15 @@ async function saveJob(
 async function main() {
   console.log(`Starting LinkedIn contract scraper${DRY_RUN ? " [DRY RUN]" : ""}…\n`);
 
-  // Load existing job IDs to avoid duplicates
+  // Load existing job IDs to avoid duplicates.
+  // LinkedIn search only returns jobs from the last 24 hours, so checking the
+  // last 7 days is more than sufficient — and avoids Supabase's default 1000-row
+  // page limit that would cause old IDs to be missed (leading to duplicate emails).
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: existingRows, error: existingErr } = await supabase
     .from("LinkedinScrapeResults")
-    .select("LinkedInJobID");
+    .select("LinkedInJobID")
+    .gte("created_at", sevenDaysAgo);
 
   if (existingErr) {
     console.error("Failed to fetch existing IDs:", existingErr.message);
@@ -886,7 +891,7 @@ async function main() {
       .map((r: { LinkedInJobID: string }) => String(r.LinkedInJobID ?? ""))
       .filter(Boolean)
   );
-  console.log(`Loaded ${seenIds.size} existing job IDs`);
+  console.log(`Loaded ${seenIds.size} existing job IDs (last 7 days)`);
 
   // Load search terms
   const { data: termRows, error: termsErr } = await supabase
@@ -1051,9 +1056,7 @@ async function main() {
       } else {
         const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
         const savedId = await saveJob(pendingDetail, enrichment, posterEmail);
-        dispatchContractAlerts(pendingDetail, enrichment, alerts, proUsers, savedId).catch((e) =>
-          console.warn(`  Alert dispatch error: ${(e as Error).message}`)
-        );
+        collectAlertMatches(pendingDetail, enrichment, alerts, savedId, alertBucket);
         processed++;
         console.log(
           `  ✓ ${pendingDetail.jobTitle} — IR35: ${enrichment.ir35Status} | ${enrichment.workingType} | ${enrichment.payRate ?? "no rate"} | ${enrichment.contractDuration ?? "no duration"}${posterEmail ? ` | ${posterEmail}` : ""}`
