@@ -91,7 +91,7 @@ const features = [
   { icon: AtSign, title: "Direct recruiter email on every contract", description: "No more sending into the void. We surface the direct email of the person who posted each role — skip the ATS queue and land straight in the recruiter's inbox.", highlight: "No other board does this" },
   { icon: Zap, title: "Updated every 10 minutes", description: "Our scrapers hit 500+ sources around the clock. New contracts appear on IT ContractHub before they spread anywhere else.", highlight: "10× faster than job boards" },
   { icon: Bell, title: "Instant email alerts", description: "Set keyword alerts and get notified the moment a matching contract is posted. Be the first CV in the inbox — every time.", highlight: "Never miss a role" },
-  { icon: FileText, title: "AI cover letter in seconds", description: "Our AI reads the job spec and your uploaded CV, then drafts a tailored cover letter matched to the role. Pair it with the recruiter's direct email and you're unstoppable.", highlight: "Apply in 60 seconds" },
+  { icon: FileText, title: "Cover letter written for that role", description: "Upload your CV once. Every time you apply, we generate a personalised cover letter matched to that specific contract — pair it with the recruiter's direct email and you're unstoppable.", highlight: "Apply in 60 seconds" },
   { icon: TrendingUp, title: "Full contract details, upfront", description: "Company, location, employment type, IR35 status, and the full job description — all visible before you click. No guessing, no wasted clicks.", highlight: "Everything, upfront" },
   { icon: Shield, title: "Track every application", description: "Bookmark, apply, and track your pipeline from Saved → Applied → Interview → Offered. Never lose track of where you stand.", highlight: "Stay in control" },
 ];
@@ -106,7 +106,7 @@ const faqs = [
   { q: "How is IT ContractHub different from every other job board?", a: "Two things no one else does: we update every 10 minutes from 500+ sources (so you see roles hours before the competition), and we give you the direct email of the recruiter who posted each role. No ATS portals, no black holes — straight to the decision maker." },
   { q: "What do you mean by 'direct recruiter email'?", a: "Every contract on our platform includes the email address of the person or agency that posted it. Instead of applying through a faceless recruitment portal, you can email the recruiter directly — personalised, fast, and straight to their inbox." },
   { q: "Who is IT ContractHub Pro for?", a: "Any UK IT contractor who's tired of applying late, getting lost in ATS queues, and missing roles. Whether you're in Data, DevOps, Cloud, or Development — direct contact with recruiters changes everything." },
-  { q: "Is there a free plan?", a: "Yes — browse contract titles and dates for free. Upgrade to Pro to unlock full details, recruiter emails, AI cover letters, email alerts, and the application tracker." },
+  { q: "Is there a free plan?", a: "Yes — browse contract titles and dates for free. Upgrade to Pro to unlock full details, recruiter emails, personalised cover letters, email alerts, and the application tracker." },
 ];
 
 const POPULAR_SEARCHES = ["Python", "AWS", "React", "DevOps", "Data Engineer", "Azure", "Java", "MLOps"];
@@ -557,17 +557,17 @@ const Index = () => {
           {/* Header */}
           <div className="text-center max-w-2xl mx-auto mb-16">
             <div className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-1.5 mb-5">
-              <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-violet-400">AI-Powered Applications</span>
+              <FileText className="h-3.5 w-3.5 text-violet-400" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-violet-400">Personalised Cover Letters</span>
             </div>
             <h2 className="text-3xl md:text-5xl font-heading font-bold text-foreground leading-tight">
-              Stop writing cover letters.<br />
+              Every application,<br />
               <span style={{ background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                Let AI do it for you.
+                a letter written for that role.
               </span>
             </h2>
             <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-              Upload your CV once. Every time you find a contract you like, we instantly generate a tailored cover letter — matched to that specific role, in seconds.
+              Upload your CV once. When you find a contract you want, we generate a cover letter tailored specifically to that role and your experience — ready to send in seconds.
             </p>
           </div>
 
@@ -596,7 +596,7 @@ const Index = () => {
                 step: "03",
                 icon: Sparkles,
                 title: "Get your cover letter",
-                desc: "Our AI reads the job description and your CV, then writes a tailored cover letter highlighting exactly the right experience.",
+                desc: "We match your experience to the job description and produce a cover letter that speaks directly to what that recruiter is looking for.",
                 color: "from-cyan-500/20 to-cyan-500/5",
                 iconColor: "text-cyan-400",
                 borderColor: "border-cyan-500/20",
@@ -616,14 +616,14 @@ const Index = () => {
           {/* Benefits + CTA side by side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <div>
-              <h3 className="text-2xl font-heading font-bold text-foreground mb-6">What you get with Apply with AI</h3>
+              <h3 className="text-2xl font-heading font-bold text-foreground mb-6">Stand out from the first line</h3>
               <ul className="space-y-3">
                 {[
-                  "Cover letter tailored to every role — not a generic template",
-                  "AI reads both your CV and the job spec to find the perfect match",
-                  "Flags skill gaps and keywords you're missing for that role",
-                  "Apply to more contracts in less time, without burning out",
-                  "Be the first to apply — we're fast, and so is our AI",
+                  "Tailored to every role — not a generic copy-paste template",
+                  "Draws on your CV and the job spec to highlight the right experience",
+                  "Sounds like you, not a robot — natural, professional tone",
+                  "Apply to more contracts in less time, without the blank page struggle",
+                  "Pair it with the recruiter's direct email and go straight to the top",
                 ].map((benefit) => (
                   <li key={benefit} className="flex items-start gap-3 text-sm text-muted-foreground">
                     <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
@@ -648,8 +648,8 @@ const Index = () => {
                   >
                     <Sparkles className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <span className="text-sm font-semibold text-foreground">AI-generated cover letter</span>
-                  <Badge variant="secondary" className="ml-auto text-xs">Ready in 3s</Badge>
+                  <span className="text-sm font-semibold text-foreground">Your cover letter</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">Ready in seconds</Badge>
                 </div>
                 {[
                   { w: "w-full", opacity: "opacity-60" },
