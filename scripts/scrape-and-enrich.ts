@@ -278,33 +278,87 @@ function parseJobDetail(html: string, card: JobCard): JobDetail {
   };
 }
 
-// ── Phase 3: AI enrichment ────────────────────────────────────────────────────
+// ── Phase 3: Contract pre-screen + AI enrichment ─────────────────────────────
 
-// Employment types that are definitively not contract roles
+// Free instant check — catches obviously permanent LinkedIn employment types
+// before spending any API credits at all
 const PERMANENT_EMPLOYMENT_TYPES = new Set([
   "full-time", "part-time", "internship", "volunteer",
 ]);
 
-function isPermanentByEmploymentType(employmentType: string): boolean {
-  return PERMANENT_EMPLOYMENT_TYPES.has(employmentType.toLowerCase().trim());
+/**
+ * Cheap GPT pre-screen: confirms this is a genuine UK contracting role before
+ * spending credits on the full enrichment.
+ *
+ * A genuine UK contracting role means: day rate / hourly pay, fixed duration
+ * in months, IR35-relevant, Ltd/umbrella payment — NOT annual salary + benefits.
+ *
+ * Returns true  → proceed to full enrichment
+ * Returns false → skip this job entirely
+ */
+async function preScreenIsContract(job: JobDetail): Promise<boolean> {
+  // Free instant check first — obvious permanent LinkedIn types
+  if (PERMANENT_EMPLOYMENT_TYPES.has(job.employmentType.toLowerCase().trim())) {
+    return false;
+  }
+
+  // Build a short but informative snippet for the AI
+  const snippet = `${job.description}\n\nSalary info: ${job.salaryRaw || "not provided"}`.slice(0, 800);
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    response_format: { type: "json_object" },
+    messages: [{
+      role: "user",
+      content: `You are screening UK job postings. Decide if this is a GENUINE CONTRACTING ROLE.
+
+A genuine UK contracting role has ONE OR MORE of these signals:
+✓ Day rate or hourly rate pay (e.g. £400/day, £75/hr) — NOT annual salary
+✓ Fixed contract duration stated in weeks or months (3, 6, 12 months etc.)
+✓ IR35 status mentioned (inside IR35 / outside IR35)
+✓ Ltd company or umbrella company payment route
+✓ Language like "contract", "interim", "freelance", "contractor"
+
+Return FALSE (not a contracting role) if ANY of these apply:
+✗ Annual salary or salary range (e.g. "£40,000 - £50,000 per annum")
+✗ Permanent employment benefits (pension, holiday allowance, healthcare, equity)
+✗ Fixed-term employment contract (FTC) — employee contract with an end date
+✗ Graduate scheme, apprenticeship, work placement, internship
+✗ "Permanent", "perm", "FTE", "staff" role
+
+Job title: ${job.jobTitle}
+LinkedIn employment type: ${job.employmentType || "not specified"}
+Description (excerpt):
+${snippet}
+
+Return ONLY valid JSON: {"isContract": true} or {"isContract": false}`,
+    }],
+    temperature: 0,
+    max_tokens: 20,
+  });
+
+  try {
+    const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}");
+    return parsed.isContract !== false;
+  } catch {
+    return true; // on parse error, let it through to full enrichment
+  }
 }
 
 async function enrichWithOpenAI(job: JobDetail): Promise<Enrichment> {
-  const prompt = `You are analysing a UK job posting scraped from LinkedIn.
+  // Note: isContract has already been confirmed by preScreenIsContract before
+  // this function is called — no need to re-check it here.
+  const prompt = `You are analysing a UK contract job posting scraped from LinkedIn.
 
 Return ONLY valid JSON with these exact keys:
 
 {
-  "isContract": true if this is a contract/freelance/interim role, false if it is a permanent or fixed-term employee role,
   "summary": "2-3 sentence summary of the role and key skills required. Do not mention the company name.",
   "ir35Status": "Inside IR35" | "Outside IR35" | "Unknown",
   "workingType": "Remote" | "Hybrid" | "Onsite" | "Unknown",
   "payRate": "a concrete numeric rate only (e.g. '£500/day', '£400-£550 per day', '£75/hr'). Return null if the rate is vague, e.g. 'competitive', 'negotiable', 'dependent on experience', 'get in touch' — anything without an actual number",
   "contractDuration": "extracted contract duration (e.g. 6 months, 12 months, ongoing), or null if not mentioned"
 }
-
-Clues that it is a contract role: mentions of day rate, IR35, inside/outside IR35, Ltd company, umbrella, contract duration in months, "contract", "interim", "freelance".
-Clues that it is permanent: mentions of salary, annual pay, benefits package, pension, holiday allowance, "permanent", "perm", "FTE".
 
 Job title: ${job.jobTitle}
 Employment type (from LinkedIn): ${job.employmentType || "not specified"}
@@ -323,7 +377,7 @@ Salary info: ${job.salaryRaw || "not provided"}`;
   try {
     const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}");
     return {
-      isContract: parsed.isContract !== false, // default true if unclear
+      isContract: true, // already confirmed by preScreenIsContract
       summary: parsed.summary ?? "",
       ir35Status: parsed.ir35Status ?? "Unknown",
       workingType: parsed.workingType ?? "Unknown",
@@ -332,7 +386,7 @@ Salary info: ${job.salaryRaw || "not provided"}`;
     };
   } catch {
     return {
-      isContract: true, // don't drop jobs on parse error
+      isContract: true,
       summary: "",
       ir35Status: "Unknown",
       workingType: "Unknown",
@@ -978,11 +1032,19 @@ async function main() {
     return;
   }
 
-  // Fetch details + enrich with pipelined OpenAI calls
+  // Fetch details + enrich with pipelined OpenAI calls.
+  //
+  // The pipeline chains two AI steps per job, both fired during the jitter sleep
+  // so they don't add wall-clock time for genuine contracts:
+  //   1. preScreenIsContract() — cheap call, ~20 tokens, returns null if not a contract
+  //   2. enrichWithOpenAI()    — full enrichment, only reached if step 1 passes
+  //
+  // Resolves to null if the job failed pre-screening (skip without saving).
   let processed = 0;
   let failed = 0;
+  let skippedNotContract = 0;
 
-  let openAiPromise: Promise<Enrichment> | null = null;
+  let openAiPromise: Promise<Enrichment | null> | null = null;
   let pendingDetail: JobDetail | null = null;
 
   for (let i = 0; i < allNewJobs.length; i++) {
@@ -993,8 +1055,9 @@ async function main() {
     if (openAiPromise && pendingDetail) {
       try {
         const enrichment = await openAiPromise;
-        if (!enrichment.isContract) {
-          console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — AI classified as permanent`);
+        if (enrichment === null) {
+          console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — not a contracting role`);
+          skippedNotContract++;
         } else {
           const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
           const savedId = await saveJob(pendingDetail, enrichment, posterEmail);
@@ -1027,19 +1090,19 @@ async function main() {
     if (!pendingDetail.description) {
       console.warn("  No description — skipping enrichment");
       openAiPromise = null;
-      continue;
-    }
-
-    // Pre-filter: drop obviously permanent jobs before spending OpenAI credits
-    if (isPermanentByEmploymentType(pendingDetail.employmentType)) {
-      console.log(`  ✗ Skipped — employment type is "${pendingDetail.employmentType}" (not a contract)`);
-      openAiPromise = null;
       pendingDetail = null;
       continue;
     }
 
-    // Fire OpenAI immediately — runs in background during jitter sleep
-    openAiPromise = enrichWithOpenAI(pendingDetail);
+    // Fire pre-screen + enrichment in background during jitter sleep.
+    // preScreenIsContract runs first; if it returns false the promise resolves
+    // to null immediately without spending credits on full enrichment.
+    const _pending = pendingDetail; // capture for closure
+    openAiPromise = (async (): Promise<Enrichment | null> => {
+      const isContract = await preScreenIsContract(_pending);
+      if (!isContract) return null;
+      return enrichWithOpenAI(_pending);
+    })();
 
     if (i < allNewJobs.length - 1) {
       const delay = jitter(MIN_DELAY, MAX_DELAY);
@@ -1051,8 +1114,9 @@ async function main() {
   if (openAiPromise && pendingDetail) {
     try {
       const enrichment = await openAiPromise;
-      if (!enrichment.isContract) {
-        console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — AI classified as permanent`);
+      if (enrichment === null) {
+        console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — not a contracting role`);
+        skippedNotContract++;
       } else {
         const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
         const savedId = await saveJob(pendingDetail, enrichment, posterEmail);
@@ -1071,7 +1135,7 @@ async function main() {
   // Send one digest email per user with all their matches for this run
   await sendDigestEmails(alertBucket, proUsers);
 
-  console.log(`\nDone. ${processed} saved, ${failed} failed.`);
+  console.log(`\nDone. ${processed} saved, ${skippedNotContract} skipped (not contract), ${failed} failed.`);
 }
 
 main().catch((err) => {
