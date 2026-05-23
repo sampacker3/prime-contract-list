@@ -328,7 +328,7 @@ export default function SavedJobsPage() {
                             </h3>
                             {postedToday && (
                               <Badge className="text-xs shrink-0 bg-green-500 hover:bg-green-500 text-white border-0">
-                                Posted Today
+                                New
                               </Badge>
                             )}
                             {statusStyle && (

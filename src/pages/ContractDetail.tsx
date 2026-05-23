@@ -242,7 +242,8 @@ export default function ContractDetail() {
     navigate('/tracker');
   };
 
-  const LockedCTA = () => (
+  // Defined outside render — prevents remount on every parent re-render
+  const lockedCTA = (
     <div className="text-center mt-4">
       <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
       {user ? (
@@ -383,14 +384,14 @@ export default function ContractDetail() {
                       </a>
                     </Button>
                   )}
-                  <ApplyWithAI
+                  {user && <ApplyWithAI
                     size="sm"
                     userId={user.id}
                     contractId={contract.id}
                     contract={contract}
                     hasCoverLetter={hasCoverLetter}
                     onCoverLetterCreated={markCoverLetterCreated}
-                  />
+                  />}
                   <Link to="/about-apply-with-ai" className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                     <Info className="h-3 w-3" /> What is Apply with AI?
                   </Link>
@@ -485,7 +486,7 @@ export default function ContractDetail() {
                       ))}
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent via-card/60 to-card flex flex-col items-center justify-end pb-2">
-                      <LockedCTA />
+                      {lockedCTA}
                     </div>
                   </div>
                 </div>

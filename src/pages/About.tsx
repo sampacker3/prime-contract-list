@@ -199,7 +199,7 @@ export default function About() {
             <StatCard value={500} label="Sources scraped" sub="and growing" />
             <StatCard value={10} suffix=" min" label="Update cycle" sub="not daily — every 10 mins" />
             <StatCard value={700} label="Contracts/month" sub="across all tech stacks" />
-            <StatCard value={100} label="% UK focused" sub="IR35, day rate & all" />
+            <StatCard value={100} suffix="%" label="UK focused" sub="IR35, day rate & all" />
           </div>
         </div>
       </section>

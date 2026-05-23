@@ -108,7 +108,12 @@ export default function ChatWidget() {
   // Only show for Pro paying users — hide on recruiter pages, for non-users, and during load
   if (isRecruiterPage || proLoading || !user || !isPro) return null;
 
-  const hasUnread = !isOpen && messages.length > 0;
+  // Only show the dot when there's a new assistant reply the user hasn't opened yet
+  const [lastReadCount, setLastReadCount] = useState(0);
+  const hasUnread = !isOpen && messages.filter(m => m.role === 'assistant').length > lastReadCount;
+  useEffect(() => {
+    if (isOpen) setLastReadCount(messages.filter(m => m.role === 'assistant').length);
+  }, [isOpen, messages]);
 
   async function sendMessage(text: string) {
     if (!text.trim() || isLoading) return;
