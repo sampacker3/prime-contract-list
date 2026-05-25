@@ -1,0 +1,31 @@
+name: DB Cleanup (one-time)
+
+# Run manually from the GitHub Actions UI.
+# Removes duplicate LinkedInJobID rows and zero-signal rows (likely permanent
+# jobs that slipped through before the contract pre-screen was added).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    name: Clean up LinkedinScrapeResults
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run DB cleanup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/cleanup-db.ts
