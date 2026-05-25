@@ -944,19 +944,23 @@ async function saveJob(
 async function main() {
   console.log(`Starting LinkedIn contract scraper${DRY_RUN ? " [DRY RUN]" : ""}…\n`);
 
-  // Load existing jobs from the last 7 days for two dedup checks:
+  // Load existing jobs for two dedup checks:
   //
   //   1. seenIds        — exact LinkedIn job ID match (catches re-listed jobs)
   //   2. seenSignatures — title+company+date match (catches the same job posted
   //                       multiple times with different location tags / new IDs)
   //
-  // 7 days is more than sufficient since LinkedIn search is limited to last 24h,
-  // and it keeps us well under Supabase's default 1000-row page limit.
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  // Window: 48 hours — well beyond the 3h LinkedIn search window, so any job
+  // that could realistically reappear in search will be covered.
+  //
+  // .limit(10000) overrides Supabase's default 1000-row page cap, which was
+  // silently truncating results and causing duplicates to slip through.
+  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
   const { data: existingRows, error: existingErr } = await supabase
     .from("LinkedinScrapeResults")
     .select("LinkedInJobID, JobTitle, Company, PostedDate")
-    .gte("created_at", sevenDaysAgo);
+    .gte("created_at", fortyEightHoursAgo)
+    .limit(10000);
 
   if (existingErr) {
     console.error("Failed to fetch existing IDs:", existingErr.message);
@@ -978,7 +982,7 @@ async function main() {
       )
   );
 
-  console.log(`Loaded ${seenIds.size} existing job IDs and ${seenSignatures.size} signatures (last 7 days)`);
+  console.log(`Loaded ${seenIds.size} existing job IDs and ${seenSignatures.size} signatures (last 48h)`);
 
   // Load search terms
   const { data: termRows, error: termsErr } = await supabase
