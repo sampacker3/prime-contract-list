@@ -2,8 +2,11 @@
 /**
  * One-time DB cleanup script.
  *
- * Run 1: De-duplicate rows with the same LinkedInJobID (keep lowest id).
- * Run 2: Delete zero-signal rows — jobs where ALL four enrichment fields are
+ * Step 1: De-duplicate rows with the same LinkedInJobID (keep lowest id).
+ * Step 2: De-duplicate rows with the same title + company + date — catches the
+ *         same job posted multiple times under different LinkedIn IDs/locations
+ *         (e.g. Turing posting "Remote Senior SWE" for UK, Oxford, London etc.)
+ * Step 3: Delete zero-signal rows — jobs where ALL four enrichment fields are
  *         blank/unknown, indicating no contract signals were found (likely
  *         permanent roles that slipped through before the pre-screen was added).
  *
@@ -73,8 +76,61 @@ async function removeDuplicateJobIds() {
   console.log(`  ✓ Total duplicate rows deleted: ${deleted}\n`);
 }
 
+function normaliseKey(s: string): string {
+  return (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+async function removeDuplicateSignatures() {
+  console.log("── Step 2: Remove duplicate title+company+date rows ─────────────");
+  console.log("  (same job posted multiple times with different LinkedIn IDs/locations)");
+
+  // Fetch all rows ordered by id asc so we keep the first/lowest id per signature
+  const { data: rows, error } = await supabase
+    .from("LinkedinScrapeResults")
+    .select("id, JobTitle, Company, PostedDate")
+    .order("id", { ascending: true })
+    .limit(20000);
+
+  if (error) throw new Error(`Fetch failed: ${error.message}`);
+
+  const seen = new Set<string>();
+  const toDelete: number[] = [];
+
+  for (const row of rows ?? []) {
+    if (!row.JobTitle || !row.Company) continue;
+    const sig = `${normaliseKey(row.JobTitle)}|${normaliseKey(row.Company)}|${row.PostedDate ?? ""}`;
+    if (seen.has(sig)) {
+      toDelete.push(row.id);
+    } else {
+      seen.add(sig);
+    }
+  }
+
+  console.log(`  Found ${toDelete.length} duplicate signature rows to delete`);
+
+  if (toDelete.length === 0) {
+    console.log("  Nothing to do.");
+    return;
+  }
+
+  const BATCH = 500;
+  let deleted = 0;
+  for (let i = 0; i < toDelete.length; i += BATCH) {
+    const batch = toDelete.slice(i, i + BATCH);
+    const { error: delErr, count } = await supabase
+      .from("LinkedinScrapeResults")
+      .delete({ count: "exact" })
+      .in("id", batch);
+    if (delErr) throw new Error(`Delete failed: ${delErr.message}`);
+    deleted += count ?? batch.length;
+    console.log(`  Deleted batch ${Math.floor(i / BATCH) + 1}: ${count} rows`);
+  }
+
+  console.log(`  ✓ Total duplicate signature rows deleted: ${deleted}\n`);
+}
+
 async function removeZeroSignalRows() {
-  console.log("── Step 2: Remove zero-signal rows ─────────────────────────────");
+  console.log("── Step 3: Remove zero-signal rows ─────────────────────────────");
   console.log("  (PayRate=null AND IR35Status=Unknown AND ContractDuration=null AND WorkType=Unknown)");
 
   // Count first so we can report clearly
@@ -109,6 +165,7 @@ async function main() {
   console.log("Starting DB cleanup…\n");
 
   await removeDuplicateJobIds();
+  await removeDuplicateSignatures();
   await removeZeroSignalRows();
 
   // Final row count
