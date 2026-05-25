@@ -116,6 +116,19 @@ const jitter = (min: number, max: number) =>
 const ukDateToday = () =>
   new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 
+// Normalise a string for duplicate-signature comparison:
+// lowercase, collapse whitespace, strip punctuation so minor variations don't
+// prevent a match (e.g. "Data Scientist (Masters)" vs "Data Scientist (Masters) ")
+function normaliseKey(s: string): string {
+  return (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// Build a dedup signature from the parts that uniquely identify "same job posting"
+// regardless of which LinkedIn location variant it appeared in.
+function jobSignature(title: string, company: string, date: string): string {
+  return `${normaliseKey(title)}|${normaliseKey(company)}|${date}`;
+}
+
 function cleanHtml(s: string | undefined): string {
   return (s ?? "")
     .replace(/<[^>]+>/g, "")
@@ -925,14 +938,18 @@ async function saveJob(
 async function main() {
   console.log(`Starting LinkedIn contract scraper${DRY_RUN ? " [DRY RUN]" : ""}…\n`);
 
-  // Load existing job IDs to avoid duplicates.
-  // LinkedIn search only returns jobs from the last 24 hours, so checking the
-  // last 7 days is more than sufficient — and avoids Supabase's default 1000-row
-  // page limit that would cause old IDs to be missed (leading to duplicate emails).
+  // Load existing jobs from the last 7 days for two dedup checks:
+  //
+  //   1. seenIds        — exact LinkedIn job ID match (catches re-listed jobs)
+  //   2. seenSignatures — title+company+date match (catches the same job posted
+  //                       multiple times with different location tags / new IDs)
+  //
+  // 7 days is more than sufficient since LinkedIn search is limited to last 24h,
+  // and it keeps us well under Supabase's default 1000-row page limit.
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: existingRows, error: existingErr } = await supabase
     .from("LinkedinScrapeResults")
-    .select("LinkedInJobID")
+    .select("LinkedInJobID, JobTitle, Company, PostedDate")
     .gte("created_at", sevenDaysAgo);
 
   if (existingErr) {
@@ -945,7 +962,17 @@ async function main() {
       .map((r: { LinkedInJobID: string }) => String(r.LinkedInJobID ?? ""))
       .filter(Boolean)
   );
-  console.log(`Loaded ${seenIds.size} existing job IDs (last 7 days)`);
+
+  // Signature set — same title+company+date = duplicate posting regardless of ID
+  const seenSignatures = new Set(
+    (existingRows ?? [])
+      .filter((r: { JobTitle: string; Company: string; PostedDate: string }) => r.JobTitle && r.Company)
+      .map((r: { JobTitle: string; Company: string; PostedDate: string }) =>
+        jobSignature(r.JobTitle, r.Company, r.PostedDate ?? "")
+      )
+  );
+
+  console.log(`Loaded ${seenIds.size} existing job IDs and ${seenSignatures.size} signatures (last 7 days)`);
 
   // Load search terms
   const { data: termRows, error: termsErr } = await supabase
@@ -1014,10 +1041,27 @@ async function main() {
       try {
         const html = await fetchPage(urls[p]);
         const cards = parseSearchResults(html);
-        const newCards = cards.filter((c) => !seenIds.has(c.jobId));
-        newCards.forEach((c) => seenIds.add(c.jobId)); // prevent cross-term dupes
+
+        let dupeSigCount = 0;
+        const newCards = cards.filter((c) => {
+          if (seenIds.has(c.jobId)) return false;
+          const sig = jobSignature(c.jobTitle, c.company, c.postingDate);
+          if (seenSignatures.has(sig)) {
+            dupeSigCount++;
+            return false; // same job posted again under a different ID/location
+          }
+          return true;
+        });
+
+        // Register both checks so cross-term dupes are also caught
+        newCards.forEach((c) => {
+          seenIds.add(c.jobId);
+          seenSignatures.add(jobSignature(c.jobTitle, c.company, c.postingDate));
+        });
+
         allNewJobs.push(...newCards);
-        console.log(`  Page ${p + 1}: ${cards.length} found, ${newCards.length} new`);
+        const dupePart = dupeSigCount ? `, ${dupeSigCount} duplicate posting(s) skipped` : "";
+        console.log(`  Page ${p + 1}: ${cards.length} found, ${newCards.length} new${dupePart}`);
       } catch (err) {
         console.warn(`  Page ${p + 1} failed: ${(err as Error).message}`);
       }
