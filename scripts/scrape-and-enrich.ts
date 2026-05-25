@@ -294,9 +294,11 @@ function parseJobDetail(html: string, card: JobCard): JobDetail {
 // ── Phase 3: Contract pre-screen + AI enrichment ─────────────────────────────
 
 // Free instant check — catches obviously permanent LinkedIn employment types
-// before spending any API credits at all
+// before spending any API credits at all.
+// LinkedIn employment type values: full-time, part-time, contract, temporary,
+// internship, volunteer, other. We block the clearly non-contract ones.
 const PERMANENT_EMPLOYMENT_TYPES = new Set([
-  "full-time", "part-time", "internship", "volunteer",
+  "full-time", "part-time", "internship", "volunteer", "apprenticeship",
 ]);
 
 /**
@@ -315,8 +317,9 @@ async function preScreenIsContract(job: JobDetail): Promise<boolean> {
     return false;
   }
 
-  // Build a short but informative snippet for the AI
-  const snippet = `${job.description}\n\nSalary info: ${job.salaryRaw || "not provided"}`.slice(0, 800);
+  // Use the full description — contract signals (day rate, IR35, duration, Ltd/umbrella)
+  // often appear later in the posting after the intro, so truncating causes misses.
+  const fullText = `${job.description}\n\nSalary info: ${job.salaryRaw || "not provided"}`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -335,14 +338,16 @@ A genuine UK contracting role has ONE OR MORE of these signals:
 Return FALSE (not a contracting role) if ANY of these apply:
 ✗ Annual salary or salary range (e.g. "£40,000 - £50,000 per annum")
 ✗ Permanent employment benefits (pension, holiday allowance, healthcare, equity)
-✗ Fixed-term employment contract (FTC) — employee contract with an end date
+✗ Fixed-term employment contract (FTC) — employee contract with an end date, but paid as an employee with salary + benefits
 ✗ Graduate scheme, apprenticeship, work placement, internship
 ✗ "Permanent", "perm", "FTE", "staff" role
 
+If the description contains NO clear signals either way, return true (give it the benefit of the doubt).
+
 Job title: ${job.jobTitle}
 LinkedIn employment type: ${job.employmentType || "not specified"}
-Description (excerpt):
-${snippet}
+Full description:
+${fullText}
 
 Return ONLY valid JSON: {"isContract": true} or {"isContract": false}`,
     }],
