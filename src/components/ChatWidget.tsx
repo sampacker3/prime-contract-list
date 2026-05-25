@@ -90,6 +90,9 @@ export default function ChatWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
   const isRecruiterPage = location.pathname.startsWith("/recruiter");
 
+  // All hooks must come before any conditional return (Rules of Hooks)
+  const [lastReadCount, setLastReadCount] = useState(0);
+
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (isOpen) {
@@ -104,16 +107,15 @@ export default function ChatWidget() {
     }
   }, [isOpen]);
 
-  // Hide on recruiter pages (after all hooks)
-  // Only show for Pro paying users — hide on recruiter pages, for non-users, and during load
-  if (isRecruiterPage || proLoading || !user || !isPro) return null;
-
-  // Only show the dot when there's a new assistant reply the user hasn't opened yet
-  const [lastReadCount, setLastReadCount] = useState(0);
-  const hasUnread = !isOpen && messages.filter(m => m.role === 'assistant').length > lastReadCount;
+  // Track unread assistant replies
   useEffect(() => {
     if (isOpen) setLastReadCount(messages.filter(m => m.role === 'assistant').length);
   }, [isOpen, messages]);
+
+  // Only show for Pro paying users — hide on recruiter pages, for non-users, and during load
+  if (isRecruiterPage || proLoading || !user || !isPro) return null;
+
+  const hasUnread = !isOpen && messages.filter(m => m.role === 'assistant').length > lastReadCount;
 
   async function sendMessage(text: string) {
     if (!text.trim() || isLoading) return;
