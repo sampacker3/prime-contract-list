@@ -54,7 +54,7 @@ if (!RESEND_API_KEY) {
 const SEARCH_CONFIG = {
   jobType: "C",            // Contract only
   location: "United Kingdom",
-  postedWithin: "r86400",  // Last 24 hours
+  postedWithin: "r10800",  // Last 3 hours — matches the 2hr run frequency with a 1hr safety buffer
   pagesPerTerm: 2,         // 2 pages = up to 20 results per search term
 };
 
@@ -924,7 +924,8 @@ async function saveJob(
     EmploymentType: detail.employmentType,
     PostedText: detail.postedText,
     LinkedInJobID: detail.jobId,
-    Description: enrichment.summary,
+    Description: enrichment.summary,       // AI-generated 2-3 sentence summary
+    RawDescription: detail.description,    // Full original job description from LinkedIn
     PayRate: enrichment.payRate,
     IR35Status: enrichment.ir35Status,
     WorkType: enrichment.workingType,
