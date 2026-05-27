@@ -117,17 +117,40 @@ function formatPostedDate(createdAt: string): string {
 }
 
 const ContractsPage = () => {
-  const [searchParams] = useSearchParams();
-  const initialQ = searchParams.get("q") ?? "";
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Initialise all filter state from URL params so that navigating back
+  // (e.g. from a contract detail page) restores the exact search the user had.
+  const initialQ      = searchParams.get("q")    ?? "";
+  const initialLoc    = searchParams.get("loc")   ?? "";
+  const initialIr35   = (searchParams.get("ir35") ?? "all") as "all" | "outside" | "inside";
+  const initialDate   = (searchParams.get("date") ?? "all") as "all" | "24h" | "week" | "month";
+  const initialSort   = (searchParams.get("sort") ?? "newest") as "newest" | "relevance";
+  const initialPage   = Number(searchParams.get("page") ?? "0");
+
   const [searchInput, setSearchInput] = useState(initialQ);
-  const [locationInput, setLocationInput] = useState("United Kingdom");
+  const [locationInput, setLocationInput] = useState(initialLoc || "United Kingdom");
   const [searchTerm, setSearchTerm] = useState(initialQ);
-  const [locationFilter, setLocationFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState(initialLoc);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<"newest" | "relevance">("newest");
-  const [ir35Filter, setIr35Filter] = useState<"all" | "outside" | "inside">("all");
-  const [dateFilter, setDateFilter] = useState<"all" | "24h" | "week" | "month">("all");
-  const [page, setPage] = useState(0);
+  const [sortBy, setSortBy] = useState<"newest" | "relevance">(initialSort);
+  const [ir35Filter, setIr35Filter] = useState<"all" | "outside" | "inside">(initialIr35);
+  const [dateFilter, setDateFilter] = useState<"all" | "24h" | "week" | "month">(initialDate);
+  const [page, setPage] = useState(initialPage);
+
+  // Keep URL params in sync with active filters so that navigating away and
+  // pressing Back restores the search exactly. replace:true avoids polluting
+  // browser history with every keystroke / filter toggle.
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (searchTerm)                  params.q    = searchTerm;
+    if (locationFilter)              params.loc  = locationFilter;
+    if (ir35Filter !== "all")        params.ir35 = ir35Filter;
+    if (dateFilter !== "all")        params.date = dateFilter;
+    if (sortBy !== "newest")         params.sort = sortBy;
+    if (page > 0)                    params.page = String(page);
+    setSearchParams(params, { replace: true });
+  }, [searchTerm, locationFilter, ir35Filter, dateFilter, sortBy, page]);
 
   const { user, loading: authLoading, isPro, proLoading } = useAuth();
   const { cvExists } = useCVExists();
