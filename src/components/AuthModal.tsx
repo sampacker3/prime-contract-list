@@ -8,9 +8,11 @@ import { AlertCircle, X } from "lucide-react";
 
 interface AuthModalProps {
   onClose: () => void;
+  /** Path to navigate to after successful sign-in. Defaults to /contracts. */
+  redirectTo?: string;
 }
 
-export default function AuthModal({ onClose }: AuthModalProps) {
+export default function AuthModal({ onClose, redirectTo }: AuthModalProps) {
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<"signin" | "signup">("signin");
@@ -45,7 +47,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         setLoading(false);
       } else {
         onClose();
-        navigate("/contracts");
+        navigate(redirectTo ?? "/contracts");
       }
     } else {
       const { error } = await signUp(email, password);
@@ -113,7 +115,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
             {/* Google OAuth */}
             <button
               type="button"
-              onClick={async () => { setError(null); await signInWithGoogle(); }}
+              onClick={async () => { setError(null); await signInWithGoogle(redirectTo); }}
               className="w-full flex items-center justify-center gap-3 rounded-lg border bg-background hover:bg-accent transition-colors px-4 py-2.5 text-sm font-medium text-foreground mb-4"
             >
               <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">

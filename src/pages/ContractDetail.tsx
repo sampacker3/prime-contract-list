@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, MapPin, Clock, ExternalLink, Lock, Building2, Briefcase, Info, Bookmark, FileText, ChevronRight, Mail, Copy, Check, Sparkles, Loader2, ShieldCheck, ShieldAlert, ShieldQuestion } from "lucide-react";
 import { useCvFit } from "@/hooks/useCvFit";
@@ -181,6 +181,7 @@ function ApplyWithAI({ size = "default", userId, contractId, contract, hasCoverL
 export default function ContractDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isPro } = useAuth();
   const { savedJobIds, toggleSave } = useSavedJobs();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -567,7 +568,7 @@ export default function ContractDetail() {
       </main>
 
       <Footer />
-      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} redirectTo={location.pathname} />}
     </div>
   );
 }
