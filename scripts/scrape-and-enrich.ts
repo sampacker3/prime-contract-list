@@ -756,7 +756,18 @@ function collectAlertMatches(
 
   for (const alert of alerts) {
     if (!alertMatchesJob(alert.keywords, job)) continue;
+
     const existing = bucket.get(alert.user_id) ?? [];
+
+    // A job can match multiple alerts for the same user (e.g. "Python" and "React"
+    // both matching the same posting). Only add it once — use the first matching
+    // alert's keyword as the label. Avoids the same contract appearing N times in
+    // the digest when a user has N broad keyword alerts.
+    const alreadyAdded = existing.some((m) =>
+      contractId !== null ? m.contractId === contractId : m.job.jobId === job.jobId
+    );
+    if (alreadyAdded) continue;
+
     existing.push({ keyword: alert.keywords, alert, job, enrichment, contractId });
     bucket.set(alert.user_id, existing);
   }
