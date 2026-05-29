@@ -123,10 +123,12 @@ function normaliseKey(s: string): string {
   return (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-// Build a dedup signature from the parts that uniquely identify "same job posting"
-// regardless of which LinkedIn location variant it appeared in.
-function jobSignature(title: string, company: string, date: string): string {
-  return `${normaliseKey(title)}|${normaliseKey(company)}|${date}`;
+// Build a dedup signature: title + company only, no date.
+// Date was removed because companies like Turing post the same job with new
+// LinkedIn IDs every day — including the date meant each day's re-post looked
+// unique and slipped through, filling the digest with week-old duplicates.
+function jobSignature(title: string, company: string): string {
+  return `${normaliseKey(title)}|${normaliseKey(company)}`;
 }
 
 function cleanHtml(s: string | undefined): string {
@@ -759,12 +761,14 @@ function collectAlertMatches(
 
     const existing = bucket.get(alert.user_id) ?? [];
 
-    // A job can match multiple alerts for the same user (e.g. "Python" and "React"
-    // both matching the same posting). Only add it once — use the first matching
-    // alert's keyword as the label. Avoids the same contract appearing N times in
-    // the digest when a user has N broad keyword alerts.
+    // Only add a job once per user per digest. Two checks:
+    //   1. Same contractId — same DB row matched by multiple alerts
+    //   2. Same title+company — different DB rows (Turing location variants) that
+    //      both passed the scraper and both triggered alerts in the same run
+    const jobSig = jobSignature(job.jobTitle, job.company);
     const alreadyAdded = existing.some((m) =>
-      contractId !== null ? m.contractId === contractId : m.job.jobId === job.jobId
+      (contractId !== null && m.contractId === contractId) ||
+      jobSignature(m.job.jobTitle, m.job.company) === jobSig
     );
     if (alreadyAdded) continue;
 
@@ -957,20 +961,18 @@ async function main() {
 
   // Load existing jobs for two dedup checks:
   //
-  //   1. seenIds        — exact LinkedIn job ID match (catches re-listed jobs)
-  //   2. seenSignatures — title+company+date match (catches the same job posted
-  //                       multiple times with different location tags / new IDs)
+  //   1. seenIds        — exact LinkedIn job ID match
+  //   2. seenSignatures — title+company match (NO date) — catches the same job
+  //                       posted day after day with fresh LinkedIn IDs (e.g. Turing)
   //
-  // Window: 48 hours — well beyond the 3h LinkedIn search window, so any job
-  // that could realistically reappear in search will be covered.
-  //
-  // .limit(10000) overrides Supabase's default 1000-row page cap, which was
-  // silently truncating results and causing duplicates to slip through.
-  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  // Window: 7 days — gives seenSignatures enough history to block daily re-posts
+  // by spam recruiters while still allowing a genuinely new role with the same
+  // title to appear after a week.
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: existingRows, error: existingErr } = await supabase
     .from("LinkedinScrapeResults")
-    .select("LinkedInJobID, JobTitle, Company, PostedDate")
-    .gte("created_at", fortyEightHoursAgo)
+    .select("LinkedInJobID, JobTitle, Company")
+    .gte("created_at", sevenDaysAgo)
     .limit(10000);
 
   if (existingErr) {
@@ -984,16 +986,14 @@ async function main() {
       .filter(Boolean)
   );
 
-  // Signature set — same title+company+date = duplicate posting regardless of ID
+  // Signature set — title+company only (no date)
   const seenSignatures = new Set(
     (existingRows ?? [])
-      .filter((r: { JobTitle: string; Company: string; PostedDate: string }) => r.JobTitle && r.Company)
-      .map((r: { JobTitle: string; Company: string; PostedDate: string }) =>
-        jobSignature(r.JobTitle, r.Company, r.PostedDate ?? "")
-      )
+      .filter((r: { JobTitle: string; Company: string }) => r.JobTitle && r.Company)
+      .map((r: { JobTitle: string; Company: string }) => jobSignature(r.JobTitle, r.Company))
   );
 
-  console.log(`Loaded ${seenIds.size} existing job IDs and ${seenSignatures.size} signatures (last 48h)`);
+  console.log(`Loaded ${seenIds.size} existing job IDs and ${seenSignatures.size} signatures (last 7 days)`);
 
   // Load search terms
   const { data: termRows, error: termsErr } = await supabase
@@ -1063,22 +1063,24 @@ async function main() {
         const html = await fetchPage(urls[p]);
         const cards = parseSearchResults(html);
 
+        // Iterate one-by-one so each accepted card is registered in seenIds/seenSignatures
+        // immediately — prevents multiple cards on the SAME PAGE with the same title+company
+        // from all passing the check before any of them are registered (the old batch
+        // filter+forEach had this race: all three Turing variants would pass the filter
+        // before any was added to seenSignatures).
         let dupeSigCount = 0;
-        const newCards = cards.filter((c) => {
-          if (seenIds.has(c.jobId)) return false;
-          const sig = jobSignature(c.jobTitle, c.company, c.postingDate);
+        const newCards: JobCard[] = [];
+        for (const c of cards) {
+          if (seenIds.has(c.jobId)) continue;
+          const sig = jobSignature(c.jobTitle, c.company);
           if (seenSignatures.has(sig)) {
             dupeSigCount++;
-            return false; // same job posted again under a different ID/location
+            continue; // same title+company already seen — skip this location/ID variant
           }
-          return true;
-        });
-
-        // Register both checks so cross-term dupes are also caught
-        newCards.forEach((c) => {
           seenIds.add(c.jobId);
-          seenSignatures.add(jobSignature(c.jobTitle, c.company, c.postingDate));
-        });
+          seenSignatures.add(sig);
+          newCards.push(c);
+        }
 
         allNewJobs.push(...newCards);
         const dupePart = dupeSigCount ? `, ${dupeSigCount} duplicate posting(s) skipped` : "";
