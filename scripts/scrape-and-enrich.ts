@@ -29,7 +29,6 @@ const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const MIN_DELAY = Number(process.env.MIN_DELAY_MS ?? 1500);
 const MAX_DELAY = Number(process.env.MAX_DELAY_MS ?? 3000);
@@ -43,9 +42,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 if (!OPENAI_API_KEY) {
   console.error("Missing OPENAI_API_KEY");
   process.exit(1);
-}
-if (!HUNTER_API_KEY) {
-  console.warn("No HUNTER_API_KEY set — poster email lookup will be skipped");
 }
 if (!RESEND_API_KEY) {
   console.warn("No RESEND_API_KEY set — contract alert emails will be skipped");
@@ -416,28 +412,30 @@ Salary info: ${job.salaryRaw || "not provided"}`;
   }
 }
 
-// ── Email lookup (slug → GPT domain → Verify × 2 → Finder fallback) ──────────
+// ── Email lookup (free: Clearbit domain + firstname.lastname pattern) ─────────
+//
+// Strategy: resolve the company domain for free via Clearbit, then construct
+// firstname.lastname@domain directly. No verification, no Hunter credits.
+// This format covers ~65% of UK business emails. Bounces on misses are
+// acceptable — better than paying per lookup for marginal accuracy gain.
+
+// Per-run domain cache — same company can appear across many search terms,
+// no need to hit Clearbit more than once for each.
+const domainCache = new Map<string, string | null>();
 
 function parseLinkedInSlug(linkedInUrl: string): string {
-  // Extract slug from e.g. https://www.linkedin.com/company/we-are-station/
   const match = linkedInUrl.match(/\/company\/([^/?#]+)/);
   return match ? match[1].toLowerCase() : "";
 }
 
-function domainCandidatesFromSlug(slug: string): string[] {
-  if (!slug) return [];
-  const base = slug.replace(/-/g, ""); // we-are-station → wearestation
-  return [`${base}.com`, `${base}.co.uk`, `${slug}.com`, `${slug}.co.uk`];
-}
-
 // Normalise a name part for use in an email address:
-// removes apostrophes, hyphens, accents → plain ascii lowercase
+// lowercase, strip accents, remove all non-alphanumeric characters
 function normaliseNameForEmail(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // remove accents
-    .replace(/[^a-z0-9]/g, "");      // remove apostrophes, hyphens, spaces etc.
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]/g, "");
 }
 
 // Score how well a Clearbit company name matches our input (0–1)
@@ -454,10 +452,12 @@ async function resolveCompanyDomain(
   company: string,
   linkedInUrl: string
 ): Promise<string | null> {
-  const slug = parseLinkedInSlug(linkedInUrl);
-  const slugCandidates = domainCandidatesFromSlug(slug);
+  const cacheKey = normaliseKey(company);
+  if (domainCache.has(cacheKey)) return domainCache.get(cacheKey) ?? null;
 
-  // ── Step 1: Clearbit autocomplete (free, no auth) ──────────────────────────
+  let domain: string | null = null;
+
+  // Step 1: Clearbit autocomplete (free, no auth)
   try {
     const res = await fetch(
       `https://autocomplete.clearbit.com/v1/companies/suggest?query=${encodeURIComponent(company)}`,
@@ -465,7 +465,6 @@ async function resolveCompanyDomain(
     );
     if (res.ok) {
       const results = await res.json() as Array<{ name: string; domain: string }>;
-      // Find best-matching result (score ≥ 0.5 = at least half the words match)
       let best: { name: string; domain: string } | null = null;
       let bestScore = 0;
       for (const r of results.slice(0, 5)) {
@@ -473,75 +472,24 @@ async function resolveCompanyDomain(
         if (score > bestScore) { bestScore = score; best = r; }
       }
       if (best && bestScore > 0.5 && best.domain) {
-        console.log(`  Domain (Clearbit): ${best.domain} [${best.name}, score=${bestScore.toFixed(2)}]`);
-        return best.domain;
+        console.log(`  Domain (Clearbit): ${best.domain} [score=${bestScore.toFixed(2)}]`);
+        domain = best.domain;
       }
     }
-  } catch {
-    // ignore — fall through to GPT
-  }
+  } catch { /* ignore — fall through to slug */ }
 
-  // ── Step 2: GPT web search — browses the LinkedIn company page ────────────
-  // Only called when Clearbit has no confident match (~$0.03/call)
-  if (linkedInUrl) {
-    try {
-      const response = await openai.responses.create({
-        model: "gpt-4o-mini",
-        tools: [{ type: "web_search_preview" }],
-        input: `Browse this LinkedIn company page and find the company's external website URL (the "Visit website" link on their profile): ${linkedInUrl}
-
-Company name for reference: ${company}
-
-Return ONLY a JSON object with a single key: { "domain": "example.com" }
-Return { "domain": null } if you cannot find a website URL.
-Do not include http:// or https:// — just the bare domain (e.g. "wearestation.com").`,
-      });
-
-      // Extract text from the response output blocks
-      const text = response.output
-        .filter((b: { type: string }) => b.type === "message")
-        .flatMap((b: { content: Array<{ type: string; text: string }> }) => b.content)
-        .filter((c: { type: string }) => c.type === "output_text")
-        .map((c: { text: string }) => c.text)
-        .join("");
-
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed.domain && parsed.domain !== "null") {
-          console.log(`  Domain (GPT web search): ${parsed.domain}`);
-          return parsed.domain;
-        }
-      }
-    } catch (err) {
-      console.warn(`  GPT web search failed: ${(err as Error).message}`);
+  // Step 2: LinkedIn slug fallback (free) — strips hyphens to form the most
+  // common domain pattern (e.g. hays-technology → haystechnology.com)
+  if (!domain) {
+    const slug = parseLinkedInSlug(linkedInUrl);
+    if (slug) {
+      domain = `${slug.replace(/-/g, "")}.com`;
+      console.log(`  Domain (slug): ${domain}`);
     }
   }
 
-  // ── Step 3: slug-derived fallback ─────────────────────────────────────────
-  return slugCandidates[0] ?? null;
-}
-
-async function hunterVerifyEmail(email: string): Promise<string> {
-  const res = await fetch(
-    `https://api.hunter.io/v2/email-verifier?email=${encodeURIComponent(email)}&api_key=${HUNTER_API_KEY}`
-  );
-  const data = await res.json() as { data?: { result?: string } };
-  return data.data?.result ?? "unknown";
-}
-
-async function hunterFindEmail(
-  domain: string,
-  firstName: string,
-  lastName: string
-): Promise<{ email: string; score: number } | null> {
-  const res = await fetch(
-    `https://api.hunter.io/v2/email-finder?domain=${encodeURIComponent(domain)}&first_name=${encodeURIComponent(firstName)}&last_name=${encodeURIComponent(lastName)}&api_key=${HUNTER_API_KEY}`
-  );
-  const data = await res.json() as { data?: { email?: string; score?: number } };
-  const email = data.data?.email ?? null;
-  const score = data.data?.score ?? 0;
-  return email ? { email, score } : null;
+  domainCache.set(cacheKey, domain);
+  return domain;
 }
 
 async function findPosterEmail(
@@ -549,64 +497,24 @@ async function findPosterEmail(
   company: string,
   companyLinkedInUrl: string
 ): Promise<string | null> {
-  if (!HUNTER_API_KEY || !posterName.trim() || !company.trim()) return null;
+  if (!posterName.trim() || !company.trim()) return null;
 
   const nameParts = posterName.trim().split(/\s+/);
-  if (nameParts.length < 2) return null;
+  if (nameParts.length < 2) return null; // need at least first + last name
 
-  const firstName = nameParts[0];
-  const lastName = nameParts.slice(1).join(" ");
-  const firstNorm = normaliseNameForEmail(firstName);   // e.g. "Luke"   → "luke"
-  const lastNorm  = normaliseNameForEmail(lastName);    // e.g. "O'Neill" → "oneill"
-  const initial   = firstNorm[0];
+  const firstNorm = normaliseNameForEmail(nameParts[0]);
+  const lastNorm  = normaliseNameForEmail(nameParts.slice(1).join(" "));
+  if (!firstNorm || !lastNorm) return null;
 
-  try {
-    // Step 1: resolve domain from LinkedIn slug + GPT (free)
-    const domain = await resolveCompanyDomain(company, companyLinkedInUrl);
-    if (!domain) {
-      console.log(`  Email lookup: couldn't resolve domain for "${company}"`);
-      return null;
-    }
-    console.log(`  Email lookup: domain → ${domain}`);
-
-    // Derive both TLD variants regardless of which GPT returned
-    const base = domain.replace(/\.(com|co\.uk)$/, "");
-    const comDomain   = `${base}.com`;
-    const coukDomain  = `${base}.co.uk`;
-
-    // Step 2: verify patterns in priority order (0.5x each, stop on first deliverable)
-    const patterns = [
-      `${firstNorm}.${lastNorm}@${comDomain}`,
-      `${firstNorm}.${lastNorm}@${coukDomain}`,
-      `${initial}.${lastNorm}@${comDomain}`,
-      `${initial}.${lastNorm}@${coukDomain}`,
-      `${firstNorm}@${comDomain}`,
-      `${firstNorm}@${coukDomain}`,
-    ];
-
-    for (const email of patterns) {
-      const result = await hunterVerifyEmail(email);
-      console.log(`  Hunter verify: ${email} → ${result}`);
-      if (result === "deliverable") return email;
-    }
-
-    // Step 3: Hunter Finder as last resort (1x)
-    console.log(`  Hunter finder: searching ${firstName} ${lastName} @ ${domain}…`);
-    const found = await hunterFindEmail(domain, firstName, lastName);
-    if (found && found.score >= 80) {
-      console.log(`  Hunter finder: ${found.email} (confidence: ${found.score})`);
-      return found.email;
-    } else if (found) {
-      console.log(`  Hunter finder: ${found.email} confidence too low (${found.score} < 80) — skipping`);
-    } else {
-      console.log(`  Hunter finder: no email found`);
-    }
-
-    return null;
-  } catch (err) {
-    console.warn(`  Email lookup failed: ${(err as Error).message}`);
+  const domain = await resolveCompanyDomain(company, companyLinkedInUrl);
+  if (!domain) {
+    console.log(`  Email: no domain resolved for "${company}" — skipping`);
     return null;
   }
+
+  const email = `${firstNorm}.${lastNorm}@${domain}`;
+  console.log(`  Email: ${email}`);
+  return email;
 }
 
 // ── Alert matching ────────────────────────────────────────────────────────────
