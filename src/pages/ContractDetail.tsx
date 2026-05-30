@@ -496,9 +496,9 @@ export default function ContractDetail() {
 
             {/* Footer CTA for free logged-in users */}
             {!isPro && user && (
-              <div className="border-t bg-surface-subtle px-6 py-4 flex items-center justify-between gap-4">
+              <div className="border-t bg-surface-subtle px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <p className="text-sm text-muted-foreground">Upgrade to Pro to apply directly to this role.</p>
-                <Button variant="hero" asChild>
+                <Button variant="hero" className="w-full sm:w-auto shrink-0" asChild>
                   <Link to="/upgrade">Upgrade to Pro</Link>
                 </Button>
               </div>

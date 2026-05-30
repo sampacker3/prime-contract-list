@@ -43,7 +43,7 @@ export default function ApplyWithAIButton({
   return (
     <>
       <div
-        className="relative shrink-0 rounded-xl p-[1.5px]"
+        className="relative w-full sm:w-auto shrink-0 rounded-xl p-[1.5px]"
         style={{
           background: "linear-gradient(135deg, #7c3aed, #3b82f6, #06b6d4, #a855f7, #7c3aed)",
           backgroundSize: "300% 300%",
@@ -57,7 +57,7 @@ export default function ApplyWithAIButton({
         onMouseLeave={() => setHover(false)}
       >
         <button
-          className={`relative flex items-center font-semibold rounded-[10px] transition-all duration-300 ${pad}`}
+          className={`relative flex w-full items-center justify-center font-semibold rounded-[10px] transition-all duration-300 ${pad}`}
           style={{
             background: hover
               ? "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.1))"
