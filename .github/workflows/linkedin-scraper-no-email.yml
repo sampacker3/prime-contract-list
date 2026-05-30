@@ -1,8 +1,7 @@
-name: LinkedIn Contract Scraper (no email lookup)
+name: LinkedIn Contract Scraper (scheduled)
 
-# Lightweight version — skips Hunter.io + GPT domain resolution entirely.
-# Use this for testing/development to avoid unnecessary API spend.
-# Trigger manually from the GitHub Actions UI.
+# Runs every 2 hours automatically. Scrapes LinkedIn, enriches with OpenAI,
+# resolves recruiter emails via Clearbit, and sends alert emails via Resend.
 
 on:
   schedule:
@@ -12,7 +11,7 @@ on:
 
 jobs:
   scrape-and-enrich:
-    name: Scrape + Enrich LinkedIn Contracts (no email)
+    name: Scrape + Enrich LinkedIn Contracts
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
