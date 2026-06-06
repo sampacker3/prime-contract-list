@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -10,10 +10,17 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 
 export default function Login() {
-  const { signIn, signInWithGoogle } = useAuth()
+  const { signIn, signInWithGoogle, user, isPro, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const redirectTo = searchParams.get('redirect') ?? '/contracts'
+
+  // Redirect already-authenticated users away (handles Google OAuth return)
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(isPro ? redirectTo : '/upgrade', { replace: true })
+    }
+  }, [user, isPro, authLoading, navigate, redirectTo])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)

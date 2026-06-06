@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useProPrice } from '@/hooks/useProPrice'
@@ -27,9 +27,17 @@ const proFeatures = [
 ]
 
 export default function Signup() {
-  const { signUp, signIn, signInWithGoogle } = useAuth()
+  const { signUp, signIn, signInWithGoogle, user, isPro, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const { priceData } = useProPrice()
+
+  // If the user is already authenticated (e.g. returned from Google OAuth),
+  // send them to the upgrade page if they haven't paid yet, or contracts if Pro.
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(isPro ? '/contracts' : '/upgrade', { replace: true })
+    }
+  }, [user, isPro, authLoading, navigate])
 
   const [tab, setTab] = useState<'signin' | 'signup'>('signup')
   const [email, setEmail] = useState('')
