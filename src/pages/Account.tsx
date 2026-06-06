@@ -13,6 +13,7 @@ import SEO from "@/components/SEO";
 import { supabase } from "@/lib/supabase";
 import { useProPrice } from "@/hooks/useProPrice";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { rdtTrack, rdtIdentify } from "@/lib/reddit";
 
 const CV_BUCKET = "cvs";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -227,6 +228,9 @@ const AccountPage = () => {
 
       if (cached?.subscription_active) {
         clearInterval(interval);
+        // Reddit pixel: fire Purchase once subscription is confirmed
+        if (user?.email) rdtIdentify(user.email, user.id);
+        rdtTrack('Purchase', { value: 29.99, currency: 'GBP' });
         setTimeout(() => setCheckoutSuccess(false), 8000);
         return;
       }

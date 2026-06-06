@@ -14,6 +14,7 @@ import {
 import SEO from '@/components/SEO'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import { rdtTrack, rdtIdentify } from '@/lib/reddit'
 
 const proFeatures = [
   { icon: Zap,      text: "500+ sources updated every 10 minutes" },
@@ -65,7 +66,13 @@ export default function Signup() {
       if (password.length < 6) { setError('Password must be at least 6 characters'); setLoading(false); return }
       const { error } = await signUp(email, password)
       if (error) { setError(error.message); setLoading(false) }
-      else { setConfirmed(true); setLoading(false) }
+      else {
+        // Reddit pixel: advanced matching + Lead conversion
+        rdtIdentify(email);
+        rdtTrack('Lead');
+        setConfirmed(true);
+        setLoading(false);
+      }
     }
   }
 

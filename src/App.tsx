@@ -7,11 +7,22 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useEffect } from "react";
+import { rdtTrack } from "@/lib/reddit";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname]);
+  return null;
+}
+
+// Fire Reddit PageVisit on every SPA route change
+// (the base pixel in index.html already fires once on initial hard load)
+function RedditPageView() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    rdtTrack('PageVisit');
   }, [pathname]);
   return null;
 }
@@ -78,6 +89,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ScrollToTop />
+          <RedditPageView />
           <Routes>
             {/* Contractor routes */}
             <Route path="/" element={<Index />} />
