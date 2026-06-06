@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@14?target=deno'
+import { sendRedditEvent } from '../_shared/reddit.ts'
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
   apiVersion: '2024-04-10',
@@ -43,6 +44,17 @@ Deno.serve(async (req) => {
           subscription_renews_at: renewsAt,
           stripe_customer_id: session.customer as string,
         }, { onConflict: 'id' })
+
+        // Reddit CAPI: server-side Purchase event (bypasses ad blockers)
+        const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId)
+        await sendRedditEvent({
+          type:       'Purchase',
+          email:      authUser?.email,
+          externalId: userId,
+          value:      session.amount_total ? session.amount_total / 100 : 29.99,
+          currency:   (session.currency ?? 'gbp').toUpperCase(),
+          eventId:    `purchase_${userId}_${session.id}`,
+        })
 
         console.log(`✅ Subscription activated for user ${userId}`)
         break

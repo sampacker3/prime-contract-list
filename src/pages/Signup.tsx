@@ -15,6 +15,7 @@ import SEO from '@/components/SEO'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { rdtTrack, rdtIdentify } from '@/lib/reddit'
+import { supabase } from '@/lib/supabase'
 
 const proFeatures = [
   { icon: Zap,      text: "500+ sources updated every 10 minutes" },
@@ -67,9 +68,24 @@ export default function Signup() {
       const { error } = await signUp(email, password)
       if (error) { setError(error.message); setLoading(false) }
       else {
-        // Reddit pixel: advanced matching + Lead conversion
+        // Reddit pixel (client-side)
         rdtIdentify(email);
         rdtTrack('Lead');
+
+        // Reddit CAPI (server-side — fires even if pixel is blocked)
+        // Fire-and-forget: don't await, never block the UX
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.access_token) {
+            fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reddit-lead`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+              },
+            }).catch(() => { /* non-critical */ });
+          }
+        });
+
         setConfirmed(true);
         setLoading(false);
       }
