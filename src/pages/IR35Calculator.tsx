@@ -99,6 +99,13 @@ function calcLtd(i: Inputs) {
   const dividends = Math.max(0, profit - ct);
   const divTax = dividendTax(salary, dividends);
   const net = Math.max(0, salary + dividends - divTax);
+  // Show actual effective corp tax rate (19% / blended / 25%) in the label
+  const ctRate = profit > 0 ? Math.round((ct / profit) * 100) : 19;
+  const ctLabel = profit <= R.corpSmallCap
+    ? "Corporation tax (19%)"
+    : profit >= R.corpMainCap
+      ? "Corporation tax (25%)"
+      : `Corporation tax (${ctRate}% effective)`;
   return {
     gross, net, monthly: net / 12,
     effectiveRate: gross > 0 ? Math.round((net / gross) * 100) : 0,
@@ -108,7 +115,7 @@ function calcLtd(i: Inputs) {
       { label: "Employer NI on salary",   amount: erNI },
       { label: "Accountant fees",         amount: accountant },
       { label: "Business expenses",       amount: expenses },
-      { label: "Corporation tax (19%)",   amount: ct },
+      { label: ctLabel,                   amount: ct },
       { label: "Dividend tax",            amount: divTax },
       { label: "Net take-home",           amount: net,       total: true },
     ],
@@ -237,7 +244,7 @@ export default function IR35Calculator() {
 
             <div className="rounded-lg bg-muted/50 px-3 py-2.5 flex items-start gap-2 text-xs text-muted-foreground">
               <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
-              <span>{mode === "outside" ? `Ltd uses ${fmt(R.ltdSalary)} salary; remaining profit taken as dividends.` : "Employer NI deducted before you receive gross pay."}</span>
+              <span>{mode === "outside" ? `Ltd uses ${fmt(R.ltdSalary)} salary; remaining profit taken as dividends. Corp tax: 19% (≤£50k), 25% (>£250k), marginal relief in between.` : "Employer NI deducted before you receive gross pay."}</span>
             </div>
           </div>
 
