@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Calculator, TrendingUp, Building2, Umbrella,
@@ -130,6 +130,28 @@ function NumInput({ label, hint, prefix, suffix, value, onChange, min = 0, max, 
   label: string; hint?: string; prefix?: string; suffix?: string;
   value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number;
 }) {
+  // Keep a local display string so we never show leading zeros
+  const [display, setDisplay] = useState(String(value));
+
+  // Sync when the parent value changes externally (e.g. initial mount)
+  useEffect(() => {
+    setDisplay(String(value));
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/[^0-9]/g, ""); // digits only
+    setDisplay(raw);
+    const num = raw === "" ? 0 : Number(raw);
+    if (!isNaN(num)) onChange(Math.min(max ?? Infinity, Math.max(min, num)));
+  };
+
+  const handleBlur = () => {
+    // On blur: strip leading zeros and clamp, so the field looks clean
+    const num = display === "" ? min : Math.min(max ?? Infinity, Math.max(min, Number(display) || 0));
+    setDisplay(String(num));
+    onChange(num);
+  };
+
   return (
     <div className="space-y-1.5">
       <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
@@ -139,10 +161,12 @@ function NumInput({ label, hint, prefix, suffix, value, onChange, min = 0, max, 
       <div className="relative flex items-center">
         {prefix && <span className="absolute left-3 text-sm text-muted-foreground pointer-events-none select-none">{prefix}</span>}
         <input
-          type="number" min={min} max={max} step={step} value={value}
-          onChange={e => onChange(Number(e.target.value))}
+          type="text" inputMode="numeric" pattern="[0-9]*"
+          value={display}
+          onChange={handleChange}
           onFocus={e => e.target.select()}
-          className={`w-full h-10 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring no-spinner ${prefix ? "pl-7" : "pl-3"} ${suffix ? "pr-10" : "pr-3"}`}
+          onBlur={handleBlur}
+          className={`w-full h-10 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring ${prefix ? "pl-7" : "pl-3"} ${suffix ? "pr-10" : "pr-3"}`}
         />
         {suffix && <span className="absolute right-3 text-xs text-muted-foreground pointer-events-none select-none">{suffix}</span>}
       </div>
