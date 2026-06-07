@@ -33,6 +33,7 @@ import Alerts from "./pages/Alerts.tsx";
 import Account from "./pages/Account.tsx";
 import Login from "./pages/Login.tsx";
 import Signup from "./pages/Signup.tsx";
+import AuthCallback from "./pages/AuthCallback.tsx";
 import SavedJobs from "./pages/SavedJobs.tsx";
 import Tracker from "./pages/Tracker.tsx";
 import SearchPreview from "./pages/SearchPreview.tsx";
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="/search-preview" element={<SearchPreview />} />
             <Route path="/contract/:id" element={<ContractDetail />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/signup" element={<Signup />} />
