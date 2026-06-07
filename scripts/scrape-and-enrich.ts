@@ -324,8 +324,9 @@ async function preScreenIsContract(job: JobDetail): Promise<boolean> {
     response_format: { type: "json_object" },
     messages: [{
       role: "user",
-      content: `You are screening UK job postings. Decide if this is a GENUINE CONTRACTING ROLE.
+      content: `You are screening UK job postings for an IT contracting platform. You must decide TWO things:
 
+1. IS IT A GENUINE CONTRACTING ROLE?
 A genuine UK contracting role has ONE OR MORE of these signals:
 ✓ Day rate or hourly rate pay (e.g. £400/day, £75/hr) — NOT annual salary
 ✓ Fixed contract duration stated in weeks or months (3, 6, 12 months etc.)
@@ -333,29 +334,42 @@ A genuine UK contracting role has ONE OR MORE of these signals:
 ✓ Ltd company or umbrella company payment route
 ✓ Language like "contract", "interim", "freelance", "contractor"
 
-Return FALSE (not a contracting role) if ANY of these apply:
+Return isContract=false if ANY of these apply:
 ✗ Annual salary or salary range (e.g. "£40,000 - £50,000 per annum")
 ✗ Permanent employment benefits (pension, holiday allowance, healthcare, equity)
-✗ Fixed-term employment contract (FTC) — employee contract with an end date, but paid as an employee with salary + benefits
+✗ Fixed-term employment contract (FTC) — employee contract with an end date but paid as an employee
 ✗ Graduate scheme, apprenticeship, work placement, internship
 ✗ "Permanent", "perm", "FTE", "staff" role
 
-If the description contains NO clear signals either way, return true (give it the benefit of the doubt).
+2. IS IT AN IT / TECHNOLOGY ROLE?
+IT/tech roles include: software development, data engineering, cloud, DevOps, cybersecurity,
+networking, ERP/CRM systems, BI/analytics, QA/testing, IT architecture, infrastructure,
+AI/ML engineering, technical project management, business analysis for IT projects.
+
+Return isITTech=false if the role is primarily:
+✗ Language specialist, translator, linguist, voice actor, content writer
+✗ Non-technical training data labeller or AI content annotator (e.g. "AI Trainer" for language tasks)
+✗ Healthcare, finance, legal, construction, facilities, logistics (unless the role is specifically IT within that sector)
+✗ Creative, marketing, sales, HR, admin
+
+If either check is ambiguous, default to true.
 
 Job title: ${job.jobTitle}
 LinkedIn employment type: ${job.employmentType || "not specified"}
 Full description:
 ${fullText}
 
-Return ONLY valid JSON: {"isContract": true} or {"isContract": false}`,
+Return ONLY valid JSON: {"isContract": true, "isITTech": true}`,
     }],
     temperature: 0,
-    max_tokens: 20,
+    max_tokens: 30,
   });
 
   try {
     const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}");
-    return parsed.isContract !== false;
+    if (parsed.isContract === false) return false;
+    if (parsed.isITTech === false) return false;
+    return true;
   } catch {
     return true; // on parse error, let it through to full enrichment
   }
@@ -1031,7 +1045,7 @@ async function main() {
       try {
         const enrichment = await openAiPromise;
         if (enrichment === null) {
-          console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — not a contracting role`);
+          console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — not an IT contracting role`);
           skippedNotContract++;
         } else {
           const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
@@ -1090,7 +1104,7 @@ async function main() {
     try {
       const enrichment = await openAiPromise;
       if (enrichment === null) {
-        console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — not a contracting role`);
+        console.log(`  ✗ Skipped "${pendingDetail.jobTitle}" — not an IT contracting role`);
         skippedNotContract++;
       } else {
         const posterEmail = await findPosterEmail(pendingDetail.posterName, pendingDetail.company, pendingDetail.companyUrl);
