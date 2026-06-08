@@ -7,6 +7,8 @@ type AuthContextType = {
   user: User | null
   loading: boolean
   isPro: boolean
+  isTrial: boolean          // true while subscription is in trial period
+  trialEndsAt: Date | null  // null once trial converts or is cancelled
   proLoading: boolean
   isRecruiter: boolean
   accountType: 'contractor' | 'recruiter' | null
@@ -26,6 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isPro, setIsPro] = useState(false)
+  const [isTrial, setIsTrial] = useState(false)
+  const [trialEndsAt, setTrialEndsAt] = useState<Date | null>(null)
   const [proLoading, setProLoading] = useState(true)
   const [isRecruiter, setIsRecruiter] = useState(false)
   const [accountType, setAccountType] = useState<'contractor' | 'recruiter' | null>(null)
@@ -34,6 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) {
       setIsPro(false)
+      setIsTrial(false)
+      setTrialEndsAt(null)
       setIsRecruiter(false)
       setAccountType(null)
       setProLoading(false)
@@ -42,11 +48,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProLoading(true)
     supabase
       .from('profiles')
-      .select('subscription_active, account_type, subscription_plan')
+      .select('subscription_active, account_type, subscription_plan, trial_ends_at')
       .eq('id', user.id)
       .maybeSingle()
       .then(async ({ data }) => {
         setIsPro(!!data?.subscription_active)
+        const trialEnd = data?.trial_ends_at ? new Date(data.trial_ends_at) : null
+        const inTrial = !!trialEnd && trialEnd > new Date()
+        setIsTrial(inTrial)
+        setTrialEndsAt(trialEnd)
 
         // If user signed up as recruiter but profile doesn't reflect it yet (e.g. just confirmed email)
         const metaAccountType = user.user_metadata?.account_type as string | undefined
@@ -128,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      session, user, loading, isPro, proLoading,
+      session, user, loading, isPro, isTrial, trialEndsAt, proLoading,
       isRecruiter, accountType,
       signUp, signUpRecruiter, signIn, signInWithGoogle,
       signOut, resetPassword, updatePassword,

@@ -18,7 +18,7 @@ import { rdtTrack, rdtIdentify } from '@/lib/reddit'
 import { supabase } from '@/lib/supabase'
 
 const proFeatures = [
-  { icon: Zap,      text: "500+ sources updated every 10 minutes" },
+  { icon: Zap,      text: "3-day free trial — no charge until day 4" },
   { icon: Search,   text: "Full contract details — company, location, description" },
   { icon: Bell,     text: "Instant email alerts for your keywords" },
   { icon: FileText, text: "AI-generated cover letters in one click" },
@@ -156,7 +156,7 @@ export default function Signup() {
                 <span className="text-3xl font-heading font-bold text-foreground">{displayAmount}</span>
                 <span className="text-muted-foreground mb-1">/{displayInterval}</span>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Cancel anytime · Instant access after payment</p>
+              <p className="text-xs text-muted-foreground mb-3">3-day free trial · then {displayAmount}/{displayInterval} · Cancel anytime</p>
               <p className="text-xs text-primary font-medium flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5" />
                 One contract placement pays for years of Pro

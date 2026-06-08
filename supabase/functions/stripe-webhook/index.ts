@@ -37,26 +37,34 @@ Deno.serve(async (req) => {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
         const renewsAt = new Date(subscription.current_period_end * 1000).toISOString()
 
+        // If the subscription is in trial, record when it ends
+        const trialEndsAt = subscription.trial_end
+          ? new Date(subscription.trial_end * 1000).toISOString()
+          : null
+
         await supabase.from('profiles').upsert({
           id: userId,
           subscription_plan: 'pro',
           subscription_active: true,
           subscription_renews_at: renewsAt,
           stripe_customer_id: session.customer as string,
+          trial_ends_at: trialEndsAt,
         }, { onConflict: 'id' })
 
-        // Reddit CAPI: server-side Purchase event (bypasses ad blockers)
-        const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId)
-        await sendRedditEvent({
-          type:       'Purchase',
-          email:      authUser?.email,
-          externalId: userId,
-          value:      session.amount_total ? session.amount_total / 100 : 29.99,
-          currency:   (session.currency ?? 'gbp').toUpperCase(),
-          eventId:    `purchase_${userId}_${session.id}`,
-        })
+        // Reddit CAPI: only fire Purchase on actual payment, not trial start
+        if (!trialEndsAt) {
+          const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId)
+          await sendRedditEvent({
+            type:       'Purchase',
+            email:      authUser?.email,
+            externalId: userId,
+            value:      session.amount_total ? session.amount_total / 100 : 29.99,
+            currency:   (session.currency ?? 'gbp').toUpperCase(),
+            eventId:    `purchase_${userId}_${session.id}`,
+          })
+        }
 
-        console.log(`✅ Subscription activated for user ${userId}`)
+        console.log(`✅ Subscription activated for user ${userId}${trialEndsAt ? ' (trial)' : ''}`)
         break
       }
 
@@ -66,7 +74,7 @@ Deno.serve(async (req) => {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, trial_ends_at')
           .eq('stripe_customer_id', customerId)
           .single()
 
@@ -75,11 +83,32 @@ Deno.serve(async (req) => {
         const isActive = subscription.status === 'active' || subscription.status === 'trialing'
         const renewsAt = new Date(subscription.current_period_end * 1000).toISOString()
 
+        // Clear trial_ends_at when the subscription moves from trialing → active (first real charge)
+        const wasOnTrial = !!profile.trial_ends_at
+        const nowActive  = subscription.status === 'active'
+        const trialEndsAt = subscription.trial_end && subscription.status === 'trialing'
+          ? new Date(subscription.trial_end * 1000).toISOString()
+          : null
+
         await supabase.from('profiles').update({
           subscription_active: isActive,
           subscription_plan: isActive ? 'pro' : 'free',
           subscription_renews_at: isActive ? renewsAt : null,
+          trial_ends_at: trialEndsAt,
         }).eq('id', profile.id)
+
+        // Fire Reddit Purchase when trial converts to paid (first real charge)
+        if (wasOnTrial && nowActive) {
+          const { data: { user: authUser } } = await supabase.auth.admin.getUserById(profile.id)
+          await sendRedditEvent({
+            type:       'Purchase',
+            email:      authUser?.email,
+            externalId: profile.id,
+            value:      29.99,
+            currency:   'GBP',
+            eventId:    `purchase_trial_convert_${profile.id}`,
+          })
+        }
 
         console.log(`🔄 Subscription updated for customer ${customerId}: ${subscription.status}`)
         break
@@ -101,6 +130,7 @@ Deno.serve(async (req) => {
           subscription_active: false,
           subscription_plan: 'free',
           subscription_renews_at: null,
+          trial_ends_at: null,
         }).eq('id', profile.id)
 
         console.log(`❌ Subscription cancelled for customer ${customerId}`)

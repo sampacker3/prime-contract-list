@@ -49,7 +49,7 @@ type ScoredContract = {
 }
 
 const AccountPage = () => {
-  const { user, loading, isPro, proLoading, signOut, updatePassword } = useAuth();
+  const { user, loading, isPro, isTrial, trialEndsAt, proLoading, signOut, updatePassword } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { priceString } = useProPrice();
@@ -446,12 +446,37 @@ const AccountPage = () => {
       </section>
 
       {checkoutSuccess && (
-        <div className="bg-green-50 border-b border-green-200">
+        <div className="bg-green-50 border-b border-green-200 dark:bg-green-950/40 dark:border-green-900">
           <div className="container max-w-3xl py-4 flex items-center gap-3">
             <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
             <div>
-              <p className="font-semibold text-green-800">Welcome to Pro! 🎉</p>
-              <p className="text-sm text-green-700">Your subscription is now active. You have full access to all contracts and features.</p>
+              <p className="font-semibold text-green-800 dark:text-green-300">
+                {isTrial ? "Your free trial has started! 🎉" : "Welcome to Pro! 🎉"}
+              </p>
+              <p className="text-sm text-green-700 dark:text-green-400">
+                {isTrial && trialEndsAt
+                  ? `You have full Pro access until ${trialEndsAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}. No charge until then.`
+                  : "Your subscription is now active. You have full access to all contracts and features."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trial status banner — shown persistently while on trial */}
+      {isTrial && trialEndsAt && !checkoutSuccess && (
+        <div className="border-b bg-primary/5 border-primary/20">
+          <div className="container max-w-3xl py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Zap className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-sm text-foreground">
+                <span className="font-semibold">Free trial active</span>
+                {" — "}full Pro access until{" "}
+                <span className="font-medium">
+                  {trialEndsAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+                . Your card will be charged after that.
+              </p>
             </div>
           </div>
         </div>
@@ -863,16 +888,24 @@ const AccountPage = () => {
           {profile?.subscription_active ? (
             <>
               {/* Plan status */}
-              <div className="rounded-lg bg-accent/50 p-4 mb-3">
+              <div className={`rounded-lg p-4 mb-3 ${isTrial ? 'bg-primary/5 border border-primary/20' : 'bg-accent/50'}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-heading font-semibold text-foreground capitalize">
                       {profile.subscription_plan} Plan
                     </span>
-                    <Badge className="bg-primary text-primary-foreground text-xs">Active</Badge>
+                    {isTrial
+                      ? <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">Free Trial</Badge>
+                      : <Badge className="bg-primary text-primary-foreground text-xs">Active</Badge>
+                    }
                   </div>
                   <CheckCircle className="h-5 w-5 text-primary" />
                 </div>
+                {isTrial && trialEndsAt && (
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Trial ends {trialEndsAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })} — you won't be charged until then.
+                  </p>
+                )}
               </div>
 
               {/* Billing details rows */}
@@ -884,12 +917,14 @@ const AccountPage = () => {
                 <div className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <CalendarDays className="h-3.5 w-3.5" />
-                    Next billing date
+                    {isTrial ? 'Trial ends / first charge' : 'Next billing date'}
                   </div>
                   <span className="text-sm font-semibold text-foreground">
-                    {profile.subscription_renews_at
-                      ? new Date(profile.subscription_renews_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-                      : '—'}
+                    {isTrial && trialEndsAt
+                      ? trialEndsAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                      : profile.subscription_renews_at
+                        ? new Date(profile.subscription_renews_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                        : '—'}
                   </span>
                 </div>
               </div>

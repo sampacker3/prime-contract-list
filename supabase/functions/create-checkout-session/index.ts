@@ -58,7 +58,16 @@ Deno.serve(async (req) => {
     const successUrl = body.success_url ?? `${SITE_URL}/account?checkout=success`
     const cancelUrl = body.cancel_url ?? `${SITE_URL}/account?checkout=cancelled`
 
-    // Create Checkout session
+    // Check if this customer has already used a trial (don't offer twice)
+    const existingSubscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      limit: 10,
+    })
+    const hasUsedTrial = existingSubscriptions.data.some(
+      s => s.trial_end != null
+    )
+
+    // Create Checkout session — 3-day free trial for first-time subscribers
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
@@ -67,6 +76,12 @@ Deno.serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: { supabase_user_id: user.id },
+      ...(!hasUsedTrial && {
+        subscription_data: {
+          trial_period_days: 3,
+          metadata: { supabase_user_id: user.id },
+        },
+      }),
     })
 
     return new Response(JSON.stringify({ url: session.url }), {

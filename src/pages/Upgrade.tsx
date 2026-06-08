@@ -143,7 +143,7 @@ const faqs = [
   },
   {
     q: "Is there a free trial?",
-    a: "We offer a free plan so you can explore the platform before subscribing. The free plan shows contract titles and dates — upgrade to Pro to unlock full details and alerts.",
+    a: "Yes — new subscribers get a 3-day free trial. You'll need to enter your card details, but you won't be charged until the trial ends. Cancel any time before day 4 and you pay nothing.",
   },
 ];
 
@@ -343,11 +343,11 @@ export default function UpgradePage() {
             >
               {stripeLoading
                 ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Redirecting to checkout…</>
-                : <><CreditCard className="h-5 w-5 mr-2" /> Start Pro — {displayPrice}</>
+                : <>Start free 3-day trial</>
               }
             </Button>
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <Lock className="h-3.5 w-3.5" /> Secure checkout via Stripe · Cancel anytime
+              <Lock className="h-3.5 w-3.5" /> No charge for 3 days · then {displayPrice} · Cancel anytime
             </p>
           </div>
 
@@ -510,14 +510,14 @@ export default function UpgradePage() {
               >
                 {stripeLoading
                   ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Redirecting…</>
-                  : <><CreditCard className="h-4 w-4 mr-2" /> Upgrade Now — {displayPrice}</>
+                  : <>Start free 3-day trial</>
                 }
               </Button>
 
               <div className="flex items-center justify-center gap-4 mt-4 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Secure payment</span>
                 <span>·</span>
-                <span>Instant access</span>
+                <span>No charge for 3 days</span>
                 <span>·</span>
                 <span>Cancel anytime</span>
               </div>
@@ -562,10 +562,10 @@ export default function UpgradePage() {
           >
             {stripeLoading
               ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Redirecting…</>
-              : <>Get Pro Access — {displayPrice} <ArrowRight className="ml-2 h-5 w-5" /></>
+              : <>Start free 3-day trial <ArrowRight className="ml-2 h-5 w-5" /></>
             }
           </Button>
-          <p className="mt-4 text-sm text-muted-foreground">No commitment. Cancel anytime.</p>
+          <p className="mt-4 text-sm text-muted-foreground">No charge for 3 days · then {displayPrice} · Cancel anytime.</p>
         </div>
       </section>
 
