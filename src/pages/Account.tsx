@@ -52,8 +52,8 @@ const AccountPage = () => {
   const { user, loading, isPro, isTrial, trialEndsAt, proLoading, signOut, updatePassword } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { priceString } = useProPrice();
-  const displayPrice = priceString ?? "£29.99/month";
+  const { priceString, priceData } = useProPrice();
+  const displayPrice = priceString ?? "£8.97/month";
 
   const queryClient = useQueryClient();
   const [stripeLoading, setStripeLoading] = useState<'checkout' | 'portal' | null>(null);
@@ -230,7 +230,10 @@ const AccountPage = () => {
         clearInterval(interval);
         // Reddit pixel: fire Purchase once subscription is confirmed
         if (user?.email) rdtIdentify(user.email, user.id);
-        rdtTrack('Purchase', { value: 29.99, currency: 'GBP' });
+        rdtTrack('Purchase', {
+          value: priceData ? priceData.amount / 100 : 8.97,
+          currency: (priceData?.currency ?? 'gbp').toUpperCase(),
+        });
         setTimeout(() => setCheckoutSuccess(false), 8000);
         return;
       }

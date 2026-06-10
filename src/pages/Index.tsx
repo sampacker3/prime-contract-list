@@ -334,8 +334,8 @@ const Index = () => {
   const [heroSearchFocused, setHeroSearchFocused] = useState(false);
   const heroCountUp = useCountUp(700);
   const { priceString, priceData } = useProPrice();
-  const displayPrice = priceString ?? "£29.99/month";
-  const displayAmount = priceData ? `${priceData.currency === "gbp" ? "£" : "$"}${(priceData.amount / 100).toFixed(2).replace(/\.00$/, "")}` : "£29.99";
+  const displayPrice = priceString ?? "£8.97/month";
+  const displayAmount = priceData ? `${priceData.currency === "gbp" ? "£" : "$"}${(priceData.amount / 100).toFixed(2).replace(/\.00$/, "")}` : "£8.97";
   const displayInterval = priceData?.interval ?? "month";
 
   const handleExplore = () => {

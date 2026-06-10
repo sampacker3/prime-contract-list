@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
             type:       'Purchase',
             email:      authUser?.email,
             externalId: userId,
-            value:      session.amount_total ? session.amount_total / 100 : 29.99,
+            value:      session.amount_total ? session.amount_total / 100 : 8.97,
             currency:   (session.currency ?? 'gbp').toUpperCase(),
             eventId:    `purchase_${userId}_${session.id}`,
           })
@@ -100,12 +100,13 @@ Deno.serve(async (req) => {
         // Fire Reddit Purchase when trial converts to paid (first real charge)
         if (wasOnTrial && nowActive) {
           const { data: { user: authUser } } = await supabase.auth.admin.getUserById(profile.id)
+          const price = subscription.items.data[0]?.price
           await sendRedditEvent({
             type:       'Purchase',
             email:      authUser?.email,
             externalId: profile.id,
-            value:      29.99,
-            currency:   'GBP',
+            value:      price?.unit_amount ? price.unit_amount / 100 : 8.97,
+            currency:   (price?.currency ?? 'gbp').toUpperCase(),
             eventId:    `purchase_trial_convert_${profile.id}`,
           })
         }

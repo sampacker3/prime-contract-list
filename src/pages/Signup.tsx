@@ -49,7 +49,7 @@ export default function Signup() {
 
   const displayAmount = priceData
     ? `${priceData.currency === 'gbp' ? '£' : '$'}${(priceData.amount / 100).toFixed(2).replace(/\.00$/, '')}`
-    : '£29.99'
+    : '£8.97'
   const displayInterval = priceData?.interval ?? 'month'
 
   const reset = () => { setEmail(''); setPassword(''); setError(null); setLoading(false) }
