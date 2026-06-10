@@ -346,8 +346,8 @@ export default function UpgradePage() {
                 : <>Start free 3-day trial</>
               }
             </Button>
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <Lock className="h-3.5 w-3.5" /> No charge for 3 days · then {displayPrice} · Cancel anytime
+            <p className="text-sm text-muted-foreground flex items-center justify-center gap-1.5 text-center max-w-xs sm:max-w-none">
+              <Lock className="h-3.5 w-3.5 shrink-0" /> No charge for 3 days · then {displayPrice} · Cancel anytime
             </p>
           </div>
 

@@ -91,7 +91,8 @@ type SortKey = "avg" | "min" | "max" | "count" | "name";
 
 /* ── PayRate parser ────────────────────────────────────────── */
 
-const DAILY_MIN = 150; // anything below this is almost certainly an hourly rate
+const DAILY_MIN = 150;  // anything below this is almost certainly an hourly rate
+const DAILY_MAX = 2500; // above this is almost certainly a misparsed weekly/monthly figure
 
 function parseRateRange(raw: string): { min: number; max: number } | null {
   if (!raw) return null;
@@ -100,18 +101,26 @@ function parseRateRange(raw: string): { min: number; max: number } | null {
   // Skip annual / salary
   if (/annum|annual|salary|per year|\bpa\b|p\.a/.test(s)) return null;
 
-  // Detect explicit hourly markers (convert at 7.5h/day)
-  const isExplicitHourly = /per hour|\/hour|\bph\b|p\/h|\/hr\b|per hr\b|hourly/.test(s);
+  // Detect explicit period markers
+  const isExplicitHourly  = /per hour|\/hour|\bph\b|p\/h|\/hr\b|per hr\b|hourly/.test(s);
+  const isExplicitWeekly  = /per week|\/week|\bpw\b|p\/w|weekly/.test(s);
+  const isExplicitMonthly = /per month|\/month|\bpcm\b|monthly/.test(s);
 
   // Extract candidate numbers (ignore tiny counts like "1 year", "5 days notice")
-  const raw_nums = (s.match(/\d+(?:\.\d+)?/g) ?? []).map(Number).filter(n => n >= 10 && n <= 5000);
+  const raw_nums = (s.match(/\d+(?:\.\d+)?/g) ?? []).map(Number).filter(n => n >= 10 && n <= 60000);
   if (raw_nums.length === 0) return null;
 
   let nums = raw_nums;
 
   if (isExplicitHourly) {
-    // Explicit hourly label → convert all
+    // Hourly → daily at 7.5h/day
     nums = nums.map(n => Math.round(n * 7.5));
+  } else if (isExplicitWeekly) {
+    // Weekly → daily at 5 days/week
+    nums = nums.map(n => Math.round(n / 5));
+  } else if (isExplicitMonthly) {
+    // Monthly → daily at ~21 working days/month
+    nums = nums.map(n => Math.round(n / 21));
   } else {
     // No explicit label — if every extracted number is below the daily minimum
     // it's almost certainly an unlabelled hourly rate, so convert it
@@ -120,8 +129,8 @@ function parseRateRange(raw: string): { min: number; max: number } | null {
     }
   }
 
-  // Final sanity check: discard anything that still looks implausible
-  nums = nums.filter(n => n >= DAILY_MIN && n <= 5000);
+  // Final sanity check: discard anything that still looks implausible as a day rate
+  nums = nums.filter(n => n >= DAILY_MIN && n <= DAILY_MAX);
   if (nums.length === 0) return null;
 
   if (nums.length === 1) return { min: nums[0], max: nums[0] };

@@ -61,7 +61,8 @@ Deno.serve(async (req) => {
     // Check if this customer has already used a trial (don't offer twice)
     const existingSubscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      limit: 10,
+      status: 'all', // include canceled subs so a cancelled trial can't be re-claimed
+      limit: 100,
     })
     const hasUsedTrial = existingSubscriptions.data.some(
       s => s.trial_end != null

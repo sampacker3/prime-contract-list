@@ -14,7 +14,9 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const code = searchParams.get('code')
-    const next = searchParams.get('next') ?? '/contracts'
+    const rawNext = searchParams.get('next') ?? '/contracts'
+    // Only allow internal paths — block absolute URLs and protocol-relative '//' redirects
+    const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/contracts'
 
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {

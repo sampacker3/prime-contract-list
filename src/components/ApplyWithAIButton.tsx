@@ -57,14 +57,13 @@ export default function ApplyWithAIButton({
         onMouseLeave={() => setHover(false)}
       >
         <button
-          className={`relative flex w-full items-center justify-center font-semibold rounded-[10px] transition-all duration-300 ${pad}`}
+          className={`relative flex w-full items-center justify-center font-semibold rounded-[10px] transition-all duration-300 text-foreground ${pad}`}
           style={{
             background: hover
               ? "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.1))"
               : "rgba(139,92,246,0.07)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
-            color: "#ffffff",
             opacity: loading ? 0.7 : 1,
             cursor: loading ? "default" : "pointer",
           }}
