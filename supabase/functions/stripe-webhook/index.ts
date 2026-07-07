@@ -42,7 +42,26 @@ Deno.serve(async (req) => {
           ? new Date(subscription.trial_end * 1000).toISOString()
           : null
 
-        await supabase.from('profiles').upsert({
+        // Ensure the profile row exists — Google OAuth users may not have one
+        // created by the auth trigger, so we create it if missing.
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle()
+
+        if (!existingProfile) {
+          const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId)
+          const { error: insertError } = await supabase.from('profiles').insert({
+            id: userId,
+            email: authUser?.email ?? null,
+            subscription_plan: 'free',
+            subscription_active: false,
+          })
+          if (insertError) throw new Error(`Failed to create profile for ${userId}: ${insertError.message}`)
+        }
+
+        const { error: upsertError } = await supabase.from('profiles').upsert({
           id: userId,
           subscription_plan: 'pro',
           subscription_active: true,
@@ -50,6 +69,7 @@ Deno.serve(async (req) => {
           stripe_customer_id: session.customer as string,
           trial_ends_at: trialEndsAt,
         }, { onConflict: 'id' })
+        if (upsertError) throw new Error(`Failed to activate subscription for ${userId}: ${upsertError.message}`)
 
         // Reddit CAPI: only fire Purchase on actual payment, not trial start
         if (!trialEndsAt) {
@@ -90,12 +110,13 @@ Deno.serve(async (req) => {
           ? new Date(subscription.trial_end * 1000).toISOString()
           : null
 
-        await supabase.from('profiles').update({
+        const { error: updateError } = await supabase.from('profiles').update({
           subscription_active: isActive,
           subscription_plan: isActive ? 'pro' : 'free',
           subscription_renews_at: isActive ? renewsAt : null,
           trial_ends_at: trialEndsAt,
         }).eq('id', profile.id)
+        if (updateError) throw new Error(`Failed to update subscription for customer ${customerId}: ${updateError.message}`)
 
         // Fire Reddit Purchase when trial converts to paid (first real charge)
         if (wasOnTrial && nowActive) {

@@ -222,8 +222,8 @@ const AccountPage = () => {
     const maxAttempts = 12; // poll every 2s for up to 24s
 
     const poll = async () => {
-      // Invalidate so React Query re-fetches fresh data from Supabase
-      await queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+      // refetchQueries waits for the fetch to complete before we read the cache
+      await queryClient.refetchQueries({ queryKey: ['profile', user.id] });
       const cached = queryClient.getQueryData<Profile | null>(['profile', user.id]);
 
       if (cached?.subscription_active) {

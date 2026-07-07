@@ -235,14 +235,13 @@ function ContractMarquee() {
 }
 
 function StatBar() {
-  const c1 = useCountUp(12400); const c2 = useCountUp(500); const c3 = useCountUp(8200); const c4 = useCountUp(10);
+  const c1 = useCountUp(12400); const c2 = useCountUp(500); const c4 = useCountUp(10);
   return (
     <section className="bg-gradient-brand py-14">
-      <div className="container grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <div className="container grid grid-cols-3 gap-8 text-center">
         {[
           { val: c1, suffix: "+", label: "Active Contracts" },
           { val: c2, suffix: "+", label: "Sources Scraped" },
-          { val: c3, suffix: "+", label: "Happy Contractors" },
           { val: c4, suffix: " min", label: "Update Cycle" },
         ].map(({ val, suffix, label }) => (
           <div key={label}>
