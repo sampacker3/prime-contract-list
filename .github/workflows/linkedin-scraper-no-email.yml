@@ -8,6 +8,8 @@ on:
     # Runs every 2 hours
     - cron: "0 */2 * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   scrape-and-enrich:
