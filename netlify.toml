@@ -2,6 +2,14 @@
   command = "npm run build"
   publish = "dist"
 
+# Dynamic sitemap served from Supabase edge function
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "https://kwapjfytlfmcghflojgo.supabase.co/functions/v1/sitemap"
+  status = 200
+  force = true
+
+# SPA fallback — must come last
 [[redirects]]
   from = "/*"
   to = "/index.html"

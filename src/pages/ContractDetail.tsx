@@ -10,12 +10,62 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AuthModal from "@/components/AuthModal";
+import SEO from "@/components/SEO";
 import { supabase } from "@/lib/supabase";
 import { extractSkills } from "@/lib/skills";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSavedJobs } from "@/hooks/useSavedJobs";
 import type { Contract } from "@/types/database";
 import { toast } from "sonner";
+
+const SITE_URL = "https://contracthub.co.uk";
+
+function buildJobPostingJsonLd(contract: Contract) {
+  const validThrough = new Date(contract.created_at);
+  validThrough.setDate(validThrough.getDate() + 30);
+
+  const jsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org/",
+    "@type": "JobPosting",
+    title: contract.JobTitle ?? "IT Contract Role",
+    description: contract.Description ?? contract.JobTitle ?? "IT contract opportunity in the UK",
+    datePosted: contract.created_at.slice(0, 10),
+    validThrough: validThrough.toISOString().slice(0, 10),
+    employmentType: "CONTRACTOR",
+    jobLocationType: contract.WorkType?.toLowerCase().includes("remote") ? "TELECOMMUTE" : undefined,
+    url: `${SITE_URL}/contract/${contract.id}`,
+    hiringOrganization: {
+      "@type": "Organization",
+      name: contract.Company ?? "IT ContractHub",
+      sameAs: SITE_URL,
+    },
+    jobLocation: {
+      "@type": "Place",
+      address: {
+        "@type": "PostalAddress",
+        addressCountry: "GB",
+        ...(contract.Location ? { addressLocality: contract.Location } : {}),
+      },
+    },
+  };
+
+  // Parse day rate and add salary if we have one
+  if (contract.PayRate) {
+    const match = contract.PayRate.match(/[\d,]+/);
+    if (match) {
+      const value = parseFloat(match[0].replace(/,/g, ""));
+      if (value > 0) {
+        jsonLd.baseSalary = {
+          "@type": "MonetaryAmount",
+          currency: "GBP",
+          value: { "@type": "QuantitativeValue", value, unitText: "DAY" },
+        };
+      }
+    }
+  }
+
+  return jsonLd;
+}
 
 // Strip noise words to get meaningful keywords from a job title
 const NOISE = new Set([
@@ -268,8 +318,23 @@ export default function ContractDetail() {
     </div>
   );
 
+  const seoTitle = contract
+    ? `${contract.JobTitle ?? "IT Contract"}${contract.Location ? ` — ${contract.Location}` : ""}${contract.Company ? ` at ${contract.Company}` : ""}`
+    : "IT Contract Role";
+
+  const seoDescription = contract
+    ? `${contract.IR35Status ? `${contract.IR35Status} · ` : ""}${contract.PayRate ? `${contract.PayRate} · ` : ""}${contract.WorkType ? `${contract.WorkType} · ` : ""}${contract.Description ? contract.Description.slice(0, 140) + "…" : "IT contract opportunity in the UK. Browse hundreds of live IT contracts on IT ContractHub."}`
+    : "IT contract opportunity in the UK. Browse live IT contracts on IT ContractHub.";
+
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        canonical={`/contract/${id}`}
+        ogType="article"
+        jsonLd={contract ? buildJobPostingJsonLd(contract) : undefined}
+      />
       <Navbar />
 
       <main className="flex-1 container py-4 md:py-8 max-w-3xl">

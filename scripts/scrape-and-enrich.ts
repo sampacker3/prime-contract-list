@@ -873,7 +873,81 @@ async function saveJob(
   }).select("id").single();
 
   if (error) throw new Error(error.message);
-  return (data as { id: number } | null)?.id ?? null;
+  const savedId = (data as { id: number } | null)?.id ?? null;
+
+  // Notify Google Indexing API so the page gets crawled within hours
+  if (savedId) {
+    await notifyGoogleIndexing(`https://contracthub.co.uk/contract/${savedId}`, 'URL_UPDATED');
+  }
+
+  return savedId;
+}
+
+// ── Google Indexing API ───────────────────────────────────────────────────────
+
+async function notifyGoogleIndexing(url: string, type: 'URL_UPDATED' | 'URL_DELETED'): Promise<void> {
+  const serviceAccountJson = process.env.GOOGLE_INDEXING_SERVICE_ACCOUNT;
+  if (!serviceAccountJson) return; // silently skip if not configured
+
+  try {
+    const sa = JSON.parse(serviceAccountJson);
+    const token = await getGoogleAccessToken(sa);
+
+    const res = await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, type }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.warn(`  ⚠️  Google Indexing API ${res.status}: ${text.slice(0, 200)}`);
+    } else {
+      console.log(`  📡 Google notified: ${type} ${url}`);
+    }
+  } catch (err) {
+    console.warn('  ⚠️  Google Indexing API error:', err);
+  }
+}
+
+async function getGoogleAccessToken(sa: {
+  client_email: string;
+  private_key: string;
+}): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const payload = {
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/indexing',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  };
+
+  const encode = (obj: object) =>
+    Buffer.from(JSON.stringify(obj)).toString('base64url');
+
+  const unsigned = `${encode(header)}.${encode(payload)}`;
+
+  // Sign with RS256 using Node's built-in crypto
+  const { createSign } = await import('crypto');
+  const signer = createSign('RSA-SHA256');
+  signer.update(unsigned);
+  const signature = signer.sign(sa.private_key, 'base64url');
+  const jwt = `${unsigned}.${signature}`;
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
+    }),
+  });
+
+  const json = await res.json() as { access_token?: string };
+  if (!json.access_token) throw new Error('No access_token in Google OAuth response');
+  return json.access_token;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
