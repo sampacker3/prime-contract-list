@@ -18,9 +18,45 @@ import { extractSkills as _extractSkills } from "@/lib/skills";
 
 const PAGE_SIZE = 25;
 
-function useContracts(search: string, location: string, page: number, ir35: "all" | "outside" | "inside", date: "all" | "24h" | "week" | "month", cvSkills?: string[]) {
+// Free users only see contracts older than this
+const PRO_CUTOFF_MS = 48 * 60 * 60 * 1000;
+const getProCutoff = () => new Date(Date.now() - PRO_CUTOFF_MS).toISOString();
+
+function applySearchFilters(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query: any,
+  search: string,
+  location: string,
+  ir35: "all" | "outside" | "inside",
+  date: "all" | "24h" | "week" | "month",
+  cvSkills?: string[],
+) {
+  if (cvSkills && cvSkills.length > 0) {
+    const filters = cvSkills.slice(0, 10).flatMap(s => [
+      `JobTitle.ilike.%${s}%`,
+      `Description.ilike.%${s}%`,
+    ]).join(",");
+    query = query.or(filters);
+  } else if (search) {
+    query = query.or(`JobTitle.ilike.%${search}%,Description.ilike.%${search}%,Company.ilike.%${search}%`);
+  }
+  if (location) query = query.ilike("Location", `%${location}%`);
+  if (ir35 === "outside") query = query.eq("IR35Status", "Outside IR35");
+  else if (ir35 === "inside") query = query.eq("IR35Status", "Inside IR35");
+  if (date !== "all") {
+    const now = new Date();
+    const cutoff = new Date(now);
+    if (date === "24h") cutoff.setHours(now.getHours() - 24);
+    else if (date === "week") cutoff.setDate(now.getDate() - 7);
+    else if (date === "month") cutoff.setMonth(now.getMonth() - 1);
+    query = query.gte("created_at", cutoff.toISOString());
+  }
+  return query;
+}
+
+function useContracts(search: string, location: string, page: number, ir35: "all" | "outside" | "inside", date: "all" | "24h" | "week" | "month", isPro: boolean, cvSkills?: string[]) {
   return useQuery({
-    queryKey: ["contracts", search, location, page, ir35, date, cvSkills],
+    queryKey: ["contracts", search, location, page, ir35, date, isPro, cvSkills],
     queryFn: async () => {
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -31,42 +67,35 @@ function useContracts(search: string, location: string, page: number, ir35: "all
         .order("created_at", { ascending: false })
         .range(from, to);
 
-      if (cvSkills && cvSkills.length > 0) {
-        const filters = cvSkills.slice(0, 10).flatMap(s => [
-          `JobTitle.ilike.%${s}%`,
-          `Description.ilike.%${s}%`,
-        ]).join(",");
-        query = query.or(filters);
-      } else if (search) {
-        query = query.or(
-          `JobTitle.ilike.%${search}%,Description.ilike.%${search}%,Company.ilike.%${search}%`
-        );
-      }
+      // Free users only see contracts older than 48 hours
+      if (!isPro) query = query.lt("created_at", getProCutoff());
 
-      if (location) {
-        query = query.ilike("Location", `%${location}%`);
-      }
-
-      if (ir35 === "outside") {
-        query = query.eq("IR35Status", "Outside IR35");
-      } else if (ir35 === "inside") {
-        query = query.eq("IR35Status", "Inside IR35");
-      }
-
-      if (date !== "all") {
-        const now = new Date();
-        const cutoff = new Date(now);
-        if (date === "24h") cutoff.setHours(now.getHours() - 24);
-        else if (date === "week") cutoff.setDate(now.getDate() - 7);
-        else if (date === "month") cutoff.setMonth(now.getMonth() - 1);
-        query = query.gte("created_at", cutoff.toISOString());
-      }
+      query = applySearchFilters(query, search, location, ir35, date, cvSkills);
 
       const { data, error, count } = await query;
       if (error) throw error;
       return { data: data as Contract[], total: count ?? 0 };
     },
     placeholderData: (prev) => prev,
+  });
+}
+
+function useHiddenCount(search: string, location: string, ir35: "all" | "outside" | "inside", cvSkills?: string[]) {
+  return useQuery({
+    queryKey: ["hidden-count", search, location, ir35, cvSkills],
+    queryFn: async () => {
+      let query = supabase
+        .from("LinkedinScrapeResults")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", getProCutoff());
+
+      query = applySearchFilters(query, search, location, ir35, "all", cvSkills);
+
+      const { count, error } = await query;
+      if (error) return 0;
+      return count ?? 0;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -171,7 +200,8 @@ const ContractsPage = () => {
   const searchWrapperRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
-  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page, ir35Filter, dateFilter, cvSearchMode ? cvSkills : undefined);
+  const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page, ir35Filter, dateFilter, isPro, cvSearchMode ? cvSkills : undefined);
+  const { data: hiddenCount = 0 } = useHiddenCount(searchTerm, locationFilter, ir35Filter, cvSearchMode ? cvSkills : undefined);
   const raw = result?.data ?? [];
   const totalCount = result?.total ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -394,17 +424,19 @@ const ContractsPage = () => {
         <AuthModal onClose={() => { setShowAuthModal(false); navigate("/"); }} />
       )}
 
-      {/* Upgrade banner — only render once plan status is confirmed */}
-      {user && !proLoading && !isPro && (
-        <div className="bg-primary/5 border-b border-primary/20">
+      {/* Hidden contracts banner — shown to free users when there are recent contracts they can't see */}
+      {!proLoading && !isPro && hiddenCount > 0 && (
+        <div className="bg-amber-50 border-b border-amber-200 dark:bg-amber-950/30 dark:border-amber-800/50">
           <div className="container py-3 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
-              <Lock className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-foreground font-medium">You're on the free plan.</span>
-              <span className="text-muted-foreground hidden sm:inline">Upgrade to Pro to see full details, company info, and apply directly.</span>
+              <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="text-amber-900 dark:text-amber-200 font-medium">
+                {hiddenCount} contract{hiddenCount !== 1 ? "s" : ""} from the last 48 hours {hiddenCount !== 1 ? "are" : "is"} hidden.
+              </span>
+              <span className="text-amber-700 dark:text-amber-400 hidden sm:inline">Upgrade to see the latest roles first.</span>
             </div>
             <Button variant="hero" size="sm" asChild>
-              <Link to="/upgrade">Upgrade to Pro</Link>
+              <Link to="/upgrade">See latest contracts</Link>
             </Button>
           </div>
         </div>
@@ -497,42 +529,30 @@ const ContractsPage = () => {
                         </div>
 
                         {/* Company */}
-                        {isPro ? (
-                          <p className="text-sm text-muted-foreground truncate">{contract.Company ?? "Company not listed"}</p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground blur-sm select-none opacity-50 w-32">██████████ Ltd</p>
-                        )}
+                        <p className="text-sm text-muted-foreground truncate">{contract.Company ?? "Company not listed"}</p>
 
                         {/* Meta row */}
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
-                          {isPro ? (
-                            <>
-                              {contract.Location && (
-                                <span className="flex items-center gap-1 truncate max-w-[180px]"><MapPin className="h-3 w-3 shrink-0" />{contract.Location}</span>
-                              )}
-                              {contract.EmploymentType && (
-                                <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{contract.EmploymentType}</span>
-                              )}
-                              {contract.IR35Status && (() => {
-                                const s = contract.IR35Status;
-                                const isOutside = s?.toLowerCase().includes('outside');
-                                const isInside = s?.toLowerCase().includes('inside');
-                                return (
-                                  <span className="flex items-center gap-1">
-                                    {isOutside ? <ShieldCheck className="h-3 w-3 shrink-0" /> : isInside ? <ShieldAlert className="h-3 w-3 shrink-0" /> : <ShieldQuestion className="h-3 w-3 shrink-0" />}
-                                    {isOutside ? 'Outside IR35' : isInside ? 'Inside IR35' : 'Unknown IR35'}
-                                  </span>
-                                );
-                              })()}
-                              {isPro && contract.PayRate && (
-                                <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
-                                  {contract.PayRate}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="flex items-center gap-1 blur-sm select-none opacity-50">
-                              <MapPin className="h-3 w-3" />London, UK · Contract
+                          {contract.Location && (
+                            <span className="flex items-center gap-1 truncate max-w-[180px]"><MapPin className="h-3 w-3 shrink-0" />{contract.Location}</span>
+                          )}
+                          {contract.EmploymentType && (
+                            <span className="flex items-center gap-1"><Clock className="h-3 w-3 shrink-0" />{contract.EmploymentType}</span>
+                          )}
+                          {contract.IR35Status && (() => {
+                            const s = contract.IR35Status;
+                            const isOutside = s?.toLowerCase().includes('outside');
+                            const isInside = s?.toLowerCase().includes('inside');
+                            return (
+                              <span className="flex items-center gap-1">
+                                {isOutside ? <ShieldCheck className="h-3 w-3 shrink-0" /> : isInside ? <ShieldAlert className="h-3 w-3 shrink-0" /> : <ShieldQuestion className="h-3 w-3 shrink-0" />}
+                                {isOutside ? 'Outside IR35' : isInside ? 'Inside IR35' : 'Unknown IR35'}
+                              </span>
+                            );
+                          })()}
+                          {contract.PayRate && (
+                            <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
+                              {contract.PayRate}
                             </span>
                           )}
                           <span className="text-muted-foreground/60">{formatPostedDate(contract.created_at)}</span>
@@ -576,34 +596,20 @@ const ContractsPage = () => {
                   {/* Expanded description */}
                   {expanded && (
                     <div className="px-5 pb-5 border-t pt-4">
-                      {isPro ? (
-                        <>
-                          {contract.Description ? (
-                            <p className="text-sm text-foreground whitespace-pre-line leading-relaxed line-clamp-4 mb-4">
-                              {contract.Description}
-                            </p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground italic mb-4">No description available.</p>
-                          )}
-                          <Button
-                            variant="hero"
-                            size="sm"
-                            onClick={(e) => { e.stopPropagation(); navigate(`/contract/${contract.id}`); }}
-                          >
-                            See More <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                          </Button>
-                        </>
+                      {contract.Description ? (
+                        <p className="text-sm text-foreground whitespace-pre-line leading-relaxed line-clamp-4 mb-4">
+                          {contract.Description}
+                        </p>
                       ) : (
-                        <div className="flex items-center justify-between gap-4 py-2">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Lock className="h-4 w-4 text-primary shrink-0" />
-                            <span>Upgrade to Pro to view full descriptions and apply directly.</span>
-                          </div>
-                          <Button variant="hero" size="sm" asChild onClick={(e) => e.stopPropagation()}>
-                            <Link to="/upgrade">Upgrade</Link>
-                          </Button>
-                        </div>
+                        <p className="text-sm text-muted-foreground italic mb-4">No description available.</p>
                       )}
+                      <Button
+                        variant="hero"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/contract/${contract.id}`); }}
+                      >
+                        See More <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   )}
                 </div>

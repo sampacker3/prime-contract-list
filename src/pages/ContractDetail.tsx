@@ -293,30 +293,10 @@ export default function ContractDetail() {
     navigate('/tracker');
   };
 
-  // Defined outside render — prevents remount on every parent re-render
-  const lockedCTA = (
-    <div className="text-center mt-4">
-      <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
-      {user ? (
-        <>
-          <p className="font-heading font-semibold text-foreground mb-1">Pro plan required</p>
-          <p className="text-sm text-muted-foreground mb-4">Upgrade to read full descriptions and apply directly.</p>
-          <Button variant="hero" asChild>
-            <Link to="/upgrade">Upgrade to Pro</Link>
-          </Button>
-        </>
-      ) : (
-        <>
-          <p className="font-heading font-semibold text-foreground mb-1">Sign up to read the full description</p>
-          <p className="text-sm text-muted-foreground mb-4">Pro plan — takes 30 seconds to get started</p>
-          <div className="flex gap-2 justify-center">
-            <Button variant="hero" onClick={() => setShowAuthModal(true)}>Sign Up</Button>
-            <Button variant="outline" onClick={() => setShowAuthModal(true)}>Log In</Button>
-          </div>
-        </>
-      )}
-    </div>
-  );
+  // Contracts < 48h old are gated for free users
+  const PRO_CUTOFF_MS = 48 * 60 * 60 * 1000;
+  const isRecent = contract ? Date.now() - new Date(contract.created_at).getTime() < PRO_CUTOFF_MS : false;
+  const isGated = isRecent && !isPro;
 
   const seoTitle = contract
     ? `${contract.JobTitle ?? "IT Contract"}${contract.Location ? ` — ${contract.Location}` : ""}${contract.Company ? ` at ${contract.Company}` : ""}`
@@ -367,12 +347,12 @@ export default function ContractDetail() {
             {/* Header */}
             <div className="p-5 md:p-6 border-b">
 
-              {/* Row 1: Title full-width + bookmark pinned top-right */}
+              {/* Row 1: Title + bookmark */}
               <div className="flex items-start gap-2 mb-2">
                 <h1 className="font-heading font-bold text-xl md:text-2xl text-foreground leading-snug flex-1 min-w-0">
                   {contract.JobTitle ?? "Contract Role"}
                 </h1>
-                {isPro && (
+                {user && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -385,10 +365,10 @@ export default function ContractDetail() {
                 )}
               </div>
 
-              {/* Badges row — sits below title */}
+              {/* Badges row */}
               <div className="flex flex-wrap items-center gap-1.5 mb-3">
                 {isToday && <Badge className="bg-green-500 text-white border-0 text-[11px]">New</Badge>}
-                {isPro && contract.PayRate && (
+                {contract.PayRate && (
                   <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600 dark:text-green-400">
                     {contract.PayRate}
                   </span>
@@ -397,29 +377,23 @@ export default function ContractDetail() {
 
               {/* Row 2: Meta — company, location, IR35, posted */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground mb-3">
-                {isPro ? (
-                  <>
-                    {contract.Company && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 shrink-0" />{contract.Company}</span>}
-                    {contract.Location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 shrink-0" />{contract.Location}</span>}
-                    {contract.IR35Status && (() => {
-                      const s = contract.IR35Status;
-                      const isOutside = s?.toLowerCase().includes('outside');
-                      const isInside = s?.toLowerCase().includes('inside');
-                      return (
-                        <span className="flex items-center gap-1">
-                          {isOutside ? <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> : isInside ? <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> : <ShieldQuestion className="h-3.5 w-3.5 shrink-0" />}
-                          {isOutside ? 'Outside IR35' : isInside ? 'Inside IR35' : 'Unknown IR35'}
-                        </span>
-                      );
-                    })()}
-                    {contract.WorkType && (
-                      <span className="inline-flex items-center gap-1">
-                        <Briefcase className="h-3.5 w-3.5 shrink-0" />{contract.WorkType}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span className="blur-sm select-none opacity-50">████████ Ltd · London, UK · Contract</span>
+                {contract.Company && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5 shrink-0" />{contract.Company}</span>}
+                {contract.Location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 shrink-0" />{contract.Location}</span>}
+                {contract.IR35Status && (() => {
+                  const s = contract.IR35Status;
+                  const isOutside = s?.toLowerCase().includes('outside');
+                  const isInside = s?.toLowerCase().includes('inside');
+                  return (
+                    <span className="flex items-center gap-1">
+                      {isOutside ? <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> : isInside ? <ShieldAlert className="h-3.5 w-3.5 shrink-0" /> : <ShieldQuestion className="h-3.5 w-3.5 shrink-0" />}
+                      {isOutside ? 'Outside IR35' : isInside ? 'Inside IR35' : 'Unknown IR35'}
+                    </span>
+                  );
+                })()}
+                {contract.WorkType && (
+                  <span className="inline-flex items-center gap-1">
+                    <Briefcase className="h-3.5 w-3.5 shrink-0" />{contract.WorkType}
+                  </span>
                 )}
                 {contract.created_at && (
                   <span className="text-xs text-muted-foreground/70">{formatPostedDate(contract.created_at)}</span>
@@ -441,7 +415,7 @@ export default function ContractDetail() {
               })()}
 
               {/* Row 4: Actions */}
-              {isPro && (
+              {!isGated && (
                 <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
                   {contract.URL && (
                     <Button variant="hero" size="sm" className="w-full sm:w-auto" asChild>
@@ -450,7 +424,7 @@ export default function ContractDetail() {
                       </a>
                     </Button>
                   )}
-                  {user && <ApplyWithAI
+                  {isPro && user && <ApplyWithAI
                     size="sm"
                     userId={user.id}
                     contractId={contract.id}
@@ -458,9 +432,9 @@ export default function ContractDetail() {
                     hasCoverLetter={hasCoverLetter}
                     onCoverLetterCreated={markCoverLetterCreated}
                   />}
-                  <Link to="/about-apply-with-ai" className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {isPro && <Link to="/about-apply-with-ai" className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                     <Info className="h-3 w-3" /> What is Apply with AI?
-                  </Link>
+                  </Link>}
                 </div>
               )}
 
@@ -531,38 +505,40 @@ export default function ContractDetail() {
 
             {/* Body */}
             <div className="p-6">
-              {isPro ? (
-                contract.Description ? (
-                  <div>
-                    <h2 className="font-heading font-semibold text-foreground mb-3">Job Description</h2>
-                    <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">
-                      {contract.Description}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">No description available for this contract.</p>
-                )
-              ) : (
+              {isGated ? (
+                <div className="text-center py-8">
+                  <Lock className="h-8 w-8 text-primary mx-auto mb-3" />
+                  <h2 className="font-heading font-semibold text-foreground mb-1">This contract was posted in the last 48 hours</h2>
+                  <p className="text-sm text-muted-foreground mb-5">
+                    Pro members see the latest contracts first — upgrade to get early access and apply before everyone else.
+                  </p>
+                  {user ? (
+                    <Button variant="hero" asChild>
+                      <Link to="/upgrade">See latest contracts — from £8.97/month</Link>
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2 justify-center">
+                      <Button variant="hero" onClick={() => setShowAuthModal(true)}>Get Pro Access</Button>
+                      <Button variant="outline" onClick={() => setShowAuthModal(true)}>Log In</Button>
+                    </div>
+                  )}
+                </div>
+              ) : contract.Description ? (
                 <div>
                   <h2 className="font-heading font-semibold text-foreground mb-3">Job Description</h2>
-                  <div className="relative">
-                    <div className="blur-sm select-none pointer-events-none space-y-2 opacity-50">
-                      {[100, 95, 88, 100, 92, 80, 100, 75, 90, 85].map((w, i) => (
-                        <div key={i} className="h-3.5 bg-muted-foreground/30 rounded" style={{ width: `${w}%` }} />
-                      ))}
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-card/60 to-card flex flex-col items-center justify-end pb-2">
-                      {lockedCTA}
-                    </div>
-                  </div>
+                  <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">
+                    {contract.Description}
+                  </p>
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No description available for this contract.</p>
               )}
             </div>
 
-            {/* Footer CTA for free logged-in users */}
-            {!isPro && user && (
+            {/* Footer CTA — nudge free users to upgrade for Apply with AI / recruiter contact */}
+            {!isGated && !isPro && user && (
               <div className="border-t bg-surface-subtle px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <p className="text-sm text-muted-foreground">Upgrade to Pro to apply directly to this role.</p>
+                <p className="text-sm text-muted-foreground">Upgrade to Pro to apply with AI and contact the recruiter directly.</p>
                 <Button variant="hero" className="w-full sm:w-auto shrink-0" asChild>
                   <Link to="/upgrade">Upgrade to Pro</Link>
                 </Button>
