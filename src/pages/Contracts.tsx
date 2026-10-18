@@ -99,6 +99,27 @@ function useHiddenCount(search: string, location: string, ir35: "all" | "outside
   });
 }
 
+function useRecentContracts(search: string, location: string, ir35: "all" | "outside" | "inside", cvSkills?: string[]) {
+  return useQuery({
+    queryKey: ["recent-contracts", search, location, ir35, cvSkills],
+    queryFn: async () => {
+      let query = supabase
+        .from("LinkedinScrapeResults")
+        .select("id, JobTitle, Company, Location, PayRate, IR35Status, EmploymentType, WorkType, Description, created_at")
+        .gte("created_at", getProCutoff())
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      query = applySearchFilters(query, search, location, ir35, "all", cvSkills);
+
+      const { data, error } = await query;
+      if (error) return [] as Contract[];
+      return data as Contract[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 function scoreRelevance(contract: Contract, term: string): number {
   if (!term) return 0;
   const t = term.toLowerCase();
@@ -186,22 +207,20 @@ const ContractsPage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
-  // Show auth modal as soon as we know the user is not logged in
+  // Close auth modal once user signs in
   useEffect(() => {
-    if (!authLoading && !user) {
-      setShowAuthModal(true);
-    } else if (user) {
-      setShowAuthModal(false);
-    }
-  }, [authLoading, user]);
+    if (user) setShowAuthModal(false);
+  }, [user]);
   const [cvSearchMode, setCvSearchMode] = useState(false);
   const [cvSkills, setCvSkills] = useState<string[]>([]);
   const [cvSkillsLoading, setCvSkillsLoading] = useState(false);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { savedJobIds, toggleSave } = useSavedJobs();
+  const [newSectionVisible, setNewSectionVisible] = useState(true);
   const { data: result, isLoading, isError } = useContracts(searchTerm, locationFilter, page, ir35Filter, dateFilter, isPro, cvSearchMode ? cvSkills : undefined);
   const { data: hiddenCount = 0 } = useHiddenCount(searchTerm, locationFilter, ir35Filter, cvSearchMode ? cvSkills : undefined);
+  const { data: recentContracts = [] } = useRecentContracts(searchTerm, locationFilter, ir35Filter, cvSearchMode ? cvSkills : undefined);
   const raw = result?.data ?? [];
   const totalCount = result?.total ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -424,20 +443,84 @@ const ContractsPage = () => {
         <AuthModal onClose={() => { setShowAuthModal(false); navigate("/"); }} />
       )}
 
-      {/* Hidden contracts banner — shown to free users when there are recent contracts they can't see */}
+      {/* New contracts teaser — shown to free users; lists locked recent contracts they can see but not access */}
       {!proLoading && !isPro && hiddenCount > 0 && (
-        <div className="bg-amber-50 border-b border-amber-200 dark:bg-amber-950/30 dark:border-amber-800/50">
-          <div className="container py-3 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-2 text-sm">
-              <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-              <span className="text-amber-900 dark:text-amber-200 font-medium">
-                {hiddenCount} contract{hiddenCount !== 1 ? "s" : ""} from the last 48 hours {hiddenCount !== 1 ? "are" : "is"} hidden.
-              </span>
-              <span className="text-amber-700 dark:text-amber-400 hidden sm:inline">Upgrade to see the latest roles first.</span>
+        <div className="border-b bg-card">
+          <div className="container">
+            {/* Header bar */}
+            <div className="flex items-center justify-between py-2.5 gap-3">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                  {hiddenCount} NEW
+                </span>
+                <span className="text-sm font-medium text-foreground">contracts posted in the last 48 hours</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setNewSectionVisible(v => !v)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border hover:bg-accent"
+                >
+                  {newSectionVisible ? "Hide" : "Show"}
+                </button>
+                <Button variant="hero" size="sm" asChild>
+                  <Link to="/upgrade">Unlock</Link>
+                </Button>
+              </div>
             </div>
-            <Button variant="hero" size="sm" asChild>
-              <Link to="/upgrade">See latest contracts</Link>
-            </Button>
+
+            {/* Teaser cards */}
+            {newSectionVisible && recentContracts.length > 0 && (
+              <div className="pb-4 space-y-2">
+                {recentContracts.map((contract) => {
+                  const skills = extractSkills(contract);
+                  return (
+                    <div
+                      key={contract.id}
+                      className="rounded-xl border bg-muted/30 px-4 py-3 flex items-center gap-3 flex-wrap sm:flex-nowrap"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-heading font-semibold text-sm text-foreground truncate">
+                            {contract.JobTitle ?? "Untitled Role"}
+                          </span>
+                          <Badge className="text-[10px] shrink-0 bg-green-500 hover:bg-green-500 text-white border-0">New</Badge>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+                          {contract.Location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{contract.Location}</span>}
+                          {contract.EmploymentType && <span>{contract.EmploymentType}</span>}
+                          {contract.PayRate && (
+                            <span className="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2 py-0.5 text-[11px] font-semibold text-green-600 dark:text-green-400">
+                              {contract.PayRate}
+                            </span>
+                          )}
+                        </div>
+                        {skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {skills.slice(0, 5).map(s => (
+                              <span key={s} className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary/80">
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Button variant="outline" size="sm" className="shrink-0 text-xs" asChild>
+                        <Link to="/upgrade">
+                          <Lock className="h-3 w-3 mr-1" /> Unlock
+                        </Link>
+                      </Button>
+                    </div>
+                  );
+                })}
+                {hiddenCount > recentContracts.length && (
+                  <p className="text-xs text-muted-foreground text-center pt-1">
+                    + {hiddenCount - recentContracts.length} more new contracts —{" "}
+                    <Link to="/upgrade" className="text-primary hover:underline font-medium">upgrade to see all</Link>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
