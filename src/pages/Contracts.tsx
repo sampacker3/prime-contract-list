@@ -19,7 +19,7 @@ import { extractSkills as _extractSkills } from "@/lib/skills";
 const PAGE_SIZE = 25;
 
 // Free users only see contracts older than this
-const PRO_CUTOFF_MS = 48 * 60 * 60 * 1000;
+const PRO_CUTOFF_MS = 72 * 60 * 60 * 1000;
 const getProCutoff = () => new Date(Date.now() - PRO_CUTOFF_MS).toISOString();
 
 function applySearchFilters(
@@ -453,7 +453,7 @@ const ContractsPage = () => {
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
                   {hiddenCount} NEW
                 </span>
-                <span className="text-sm font-medium text-foreground">contracts posted in the last 48 hours</span>
+                <span className="text-sm font-medium text-foreground">contracts posted in the last 72 hours</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button

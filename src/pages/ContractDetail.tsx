@@ -294,7 +294,7 @@ export default function ContractDetail() {
   };
 
   // Contracts < 48h old are gated for free users
-  const PRO_CUTOFF_MS = 48 * 60 * 60 * 1000;
+  const PRO_CUTOFF_MS = 72 * 60 * 60 * 1000;
   const isRecent = contract ? Date.now() - new Date(contract.created_at).getTime() < PRO_CUTOFF_MS : false;
   const isGated = isRecent && !isPro;
 
@@ -508,7 +508,7 @@ export default function ContractDetail() {
               {isGated ? (
                 <div className="text-center py-8">
                   <Lock className="h-8 w-8 text-primary mx-auto mb-3" />
-                  <h2 className="font-heading font-semibold text-foreground mb-1">This contract was posted in the last 48 hours</h2>
+                  <h2 className="font-heading font-semibold text-foreground mb-1">This contract was posted in the last 72 hours</h2>
                   <p className="text-sm text-muted-foreground mb-5">
                     Pro members see the latest contracts first — upgrade to get early access and apply before everyone else.
                   </p>
