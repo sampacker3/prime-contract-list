@@ -877,7 +877,7 @@ async function saveJob(
 
   // Notify Google Indexing API so the page gets crawled within hours
   if (savedId) {
-    await notifyGoogleIndexing(`https://contracthub.co.uk/contract/${savedId}`, 'URL_UPDATED');
+    await notifyGoogleIndexing(`https://itcontracthub.co.uk/contract/${savedId}`, 'URL_UPDATED');
   }
 
   return savedId;
