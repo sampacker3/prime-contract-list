@@ -18,7 +18,7 @@ import { useSavedJobs } from "@/hooks/useSavedJobs";
 import type { Contract } from "@/types/database";
 import { toast } from "sonner";
 
-const SITE_URL = "https://contracthub.co.uk";
+const SITE_URL = "https://itcontracthub.co.uk";
 
 function buildJobPostingJsonLd(contract: Contract) {
   const validThrough = new Date(contract.created_at);

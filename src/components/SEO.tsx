@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async'
 
-const SITE_URL = 'https://contracthub.co.uk'
+const SITE_URL = 'https://itcontracthub.co.uk'
 const SITE_NAME = 'IT ContractHub'
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`
 

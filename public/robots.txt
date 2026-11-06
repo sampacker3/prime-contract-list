@@ -5,4 +5,4 @@ Disallow: /alerts
 Disallow: /login
 Disallow: /signup
 
-Sitemap: https://contracthub.co.uk/sitemap.xml
+Sitemap: https://itcontracthub.co.uk/sitemap.xml

@@ -355,7 +355,7 @@ const Index = () => {
         title="IT ContractHub — Find IT Contract Roles Across the UK"
         description="Find your next IT contract in the UK. IT ContractHub aggregates thousands of contract roles from hundreds of sources, updated in real-time. Search by role, location, and rate."
         canonical="/"
-        jsonLd={{ "@context": "https://schema.org", "@type": "WebSite", "name": "IT ContractHub", "url": "https://contracthub.co.uk", "description": "Find IT contract roles across the UK, updated in real-time.", "potentialAction": { "@type": "SearchAction", "target": "https://contracthub.co.uk/contracts?q={search_term_string}", "query-input": "required name=search_term_string" } }}
+        jsonLd={{ "@context": "https://schema.org", "@type": "WebSite", "name": "IT ContractHub", "url": "https://itcontracthub.co.uk", "description": "Find IT contract roles across the UK, updated in real-time.", "potentialAction": { "@type": "SearchAction", "target": "https://itcontracthub.co.uk/contracts?q={search_term_string}", "query-input": "required name=search_term_string" } }}
       />
       <Navbar />
 

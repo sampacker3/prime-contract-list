@@ -6,7 +6,7 @@ import SEO from "@/components/SEO";
 const LAST_UPDATED = "14 April 2025";
 const COMPANY_NAME = "IT ContractHub";
 const COMPANY_EMAIL = "legal@contracthub.co.uk";
-const SITE_URL = "https://contracthub.co.uk";
+const SITE_URL = "https://itcontracthub.co.uk";
 
 export default function Terms() {
   return (

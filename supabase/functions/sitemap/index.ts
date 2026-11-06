@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const SITE_URL = 'https://contracthub.co.uk'
+const SITE_URL = 'https://itcontracthub.co.uk'
 
 const STATIC_URLS = [
   { loc: '/',                  priority: '1.0', changefreq: 'daily'   },
