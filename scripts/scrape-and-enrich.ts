@@ -309,11 +309,29 @@ const PERMANENT_EMPLOYMENT_TYPES = new Set([
  * Returns true  → proceed to full enrichment
  * Returns false → skip this job entirely
  */
+const FTC_TITLE_PATTERNS = [
+  /\bftc\b/i, /fixed[- ]term/i, /fixed term/i,
+];
+const NON_IT_TITLE_PATTERNS = [
+  /\bcounsel\b/i, /\bsolicitor\b/i, /\blegal\b/i,
+  /\baccountant\b/i, /\bfinance (business partner|manager|director)\b/i,
+  /\bhr (manager|advisor|business partner)\b/i,
+  /\btalent (development|acquisition)\b/i,
+  /\brecruitment\b/i,
+  /\bmarketing\b/i, /\bcontent (writer|creator)\b/i,
+  /\binternal\b/i,
+];
+
 async function preScreenIsContract(job: JobDetail): Promise<boolean> {
-  // Free instant check first — obvious permanent LinkedIn types
+  // Free instant checks — obvious permanent LinkedIn types
   if (PERMANENT_EMPLOYMENT_TYPES.has(job.employmentType.toLowerCase().trim())) {
     return false;
   }
+
+  // Cheap title-level rejection before spending any GPT credits
+  const title = job.jobTitle.toLowerCase();
+  if (FTC_TITLE_PATTERNS.some(p => p.test(title))) return false;
+  if (NON_IT_TITLE_PATTERNS.some(p => p.test(title))) return false;
 
   // Use the full description — contract signals (day rate, IR35, duration, Ltd/umbrella)
   // often appear later in the posting after the intro, so truncating causes misses.
@@ -326,33 +344,40 @@ async function preScreenIsContract(job: JobDetail): Promise<boolean> {
       role: "user",
       content: `You are screening UK job postings for an IT contracting platform. You must decide TWO things:
 
-1. IS IT A GENUINE CONTRACTING ROLE?
+1. IS IT A GENUINE CONTRACTING ROLE? (day-rate / freelance, NOT employee)
 A genuine UK contracting role has ONE OR MORE of these signals:
-✓ Day rate or hourly rate pay (e.g. £400/day, £75/hr) — NOT annual salary
-✓ Fixed contract duration stated in weeks or months (3, 6, 12 months etc.)
+✓ Day rate or hourly rate pay (e.g. £400/day, £75/hr, $80/hr) — NOT annual salary
+✓ Fixed contract duration in weeks or months (3m, 6m, 12m, etc.)
 ✓ IR35 status mentioned (inside IR35 / outside IR35)
 ✓ Ltd company or umbrella company payment route
-✓ Language like "contract", "interim", "freelance", "contractor"
+✓ Explicitly says "contract", "interim", "freelance", "contractor", "day rate"
 
 Return isContract=false if ANY of these apply:
-✗ Annual salary or salary range (e.g. "£40,000 - £50,000 per annum")
-✗ Permanent employment benefits (pension, holiday allowance, healthcare, equity)
-✗ Fixed-term employment contract (FTC) — employee contract with an end date but paid as an employee
-✗ Graduate scheme, apprenticeship, work placement, internship
-✗ "Permanent", "perm", "FTE", "staff" role
+✗ Annual salary or salary range (e.g. "£40,000–£50,000 pa", "salary up to £X")
+✗ Permanent employment benefits listed (pension, holiday allowance, private healthcare, equity/shares, sick pay)
+✗ Fixed-term employment contract (FTC) — an employee role with an end date, paid as PAYE employee
+✗ Title contains "FTC", "Fixed Term", or "Fixed-Term"
+✗ Graduate scheme, apprenticeship, work placement, internship, training course
+✗ "Permanent", "perm", "FTE", "staff", "employee" role
+✗ INTERNAL posting (for existing employees only)
+✗ No contracting signals at all and LinkedIn type is "temporary" or "other"
 
 2. IS IT AN IT / TECHNOLOGY ROLE?
-IT/tech roles include: software development, data engineering, cloud, DevOps, cybersecurity,
-networking, ERP/CRM systems, BI/analytics, QA/testing, IT architecture, infrastructure,
-AI/ML engineering, technical project management, business analysis for IT projects.
+IT/tech roles include: software engineering, data engineering/science/analytics, cloud, DevOps/SRE,
+cybersecurity, networking, ERP/CRM (SAP, Salesforce, Dynamics), BI/analytics, QA/testing,
+IT architecture, infrastructure, AI/ML engineering, technical PM or BA on IT projects.
 
 Return isITTech=false if the role is primarily:
+✗ Legal / compliance / counsel (unless it's specifically legal tech or IT governance)
+✗ Finance, accounting, FP&A, management accountant (unless the role is building financial IT systems)
+✗ HR, L&D, talent acquisition, recruitment (unless HR tech/systems role)
+✗ Sales, account management, marketing, creative
+✗ Facilities, construction, logistics, supply chain operations
 ✗ Language specialist, translator, linguist, voice actor, content writer
-✗ Non-technical training data labeller or AI content annotator (e.g. "AI Trainer" for language tasks)
-✗ Healthcare, finance, legal, construction, facilities, logistics (unless the role is specifically IT within that sector)
-✗ Creative, marketing, sales, HR, admin
+✗ Non-technical AI data labeller/annotator for language tasks
+✗ Healthcare clinical roles (nurse, clinician, pharmacist) — IT health informatics IS allowed
 
-If either check is ambiguous, default to true.
+If genuinely ambiguous lean true, but be strict on obvious non-IT roles.
 
 Job title: ${job.jobTitle}
 LinkedIn employment type: ${job.employmentType || "not specified"}

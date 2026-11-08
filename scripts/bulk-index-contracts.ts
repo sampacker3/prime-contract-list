@@ -6,13 +6,11 @@
 //
 // Set GOOGLE_INDEXING_SERVICE_ACCOUNT env var as an alternative to the JSON file arg.
 // Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars (or use .env.local).
+// Use --offset N to skip the first N contracts (useful when resuming after quota).
 
 import { createSign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
-import * as dotenv from "dotenv";
-
-dotenv.config({ path: ".env.local" });
 
 const SITE_URL = "https://itcontracthub.co.uk";
 const DEFAULT_LIMIT = 200; // Google's free daily quota
@@ -62,7 +60,11 @@ async function main() {
   const args = process.argv.slice(2);
   const limitArg = args.indexOf("--limit");
   const limit = limitArg !== -1 ? parseInt(args[limitArg + 1]) : DEFAULT_LIMIT;
-  const jsonFile = args.find(a => !a.startsWith("--") && args.indexOf(a) !== limitArg + 1);
+  const limitValueIdx = limitArg !== -1 ? limitArg + 1 : -1;
+  const offsetArg = args.indexOf("--offset");
+  const offset = offsetArg !== -1 ? parseInt(args[offsetArg + 1]) : 0;
+  const offsetValueIdx = offsetArg !== -1 ? offsetArg + 1 : -1;
+  const jsonFile = args.find((a, i) => !a.startsWith("--") && i !== limitValueIdx && i !== offsetValueIdx);
 
   // Load service account
   let saJson: string | undefined;
@@ -79,21 +81,22 @@ async function main() {
   const sa = JSON.parse(saJson!);
 
   // Load Supabase
-  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseKey) {
-    console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
+    if (!supabaseUrl) console.error("Missing SUPABASE_URL (or VITE_SUPABASE_URL) env var");
+    if (!supabaseKey) console.error("Missing SUPABASE_SERVICE_ROLE_KEY env var — this is NOT the anon key. Get it from Supabase dashboard > Settings > API > service_role key");
     process.exit(1);
   }
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   // Fetch contracts (most recent first)
-  console.log(`\nFetching up to ${limit} contracts from Supabase...`);
+  console.log(`\nFetching up to ${limit} contracts from Supabase (offset: ${offset})...`);
   const { data: contracts, error } = await supabase
     .from("LinkedinScrapeResults")
     .select("id, JobTitle, created_at")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit - 1);
 
   if (error) { console.error("Supabase error:", error.message); process.exit(1); }
   if (!contracts?.length) { console.log("No contracts found."); process.exit(0); }

@@ -66,9 +66,11 @@ function useMarqueeContracts() {
   return useQuery({
     queryKey: ["marquee-contracts"],
     queryFn: async () => {
+      const cutoff90 = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from("LinkedinScrapeResults")
         .select("id,JobTitle,Company,Location,WorkType,EmploymentType,Description")
+        .gte("created_at", cutoff90)
         .order("created_at", { ascending: false })
         .limit(32);
       if (error) throw error;
@@ -352,10 +354,42 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <SEO
-        title="IT ContractHub — Find IT Contract Roles Across the UK"
-        description="Find your next IT contract in the UK. IT ContractHub aggregates thousands of contract roles from hundreds of sources, updated in real-time. Search by role, location, and rate."
+        title="IT Contract Jobs UK | Find IT Contracts — IT ContractHub"
+        description="Browse thousands of IT contract jobs across the UK — updated every 10 minutes. Python, AWS, Azure, DevOps, Java, Data and more. Get the recruiter's direct email and apply in minutes."
         canonical="/"
-        jsonLd={{ "@context": "https://schema.org", "@type": "WebSite", "name": "IT ContractHub", "url": "https://itcontracthub.co.uk", "description": "Find IT contract roles across the UK, updated in real-time.", "potentialAction": { "@type": "SearchAction", "target": "https://itcontracthub.co.uk/contracts?q={search_term_string}", "query-input": "required name=search_term_string" } }}
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "IT ContractHub",
+            "url": "https://itcontracthub.co.uk",
+            "description": "IT ContractHub is the UK's leading IT contract job board, aggregating thousands of contract roles across Python, AWS, Azure, DevOps, Data, Java and more — updated every 10 minutes.",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": { "@type": "EntryPoint", "urlTemplate": "https://itcontracthub.co.uk/contracts?q={search_term_string}" },
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "IT ContractHub",
+            "url": "https://itcontracthub.co.uk",
+            "logo": "https://itcontracthub.co.uk/og-image.png",
+            "description": "IT ContractHub is a UK IT contract job board that aggregates contract roles from hundreds of sources, updated every 10 minutes. Features include direct recruiter email, AI cover letters, and instant job alerts.",
+            "contactPoint": { "@type": "ContactPoint", "email": "legal@itcontracthub.co.uk", "contactType": "customer support" },
+            "sameAs": []
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": faqs.map(f => ({
+              "@type": "Question",
+              "name": f.q,
+              "acceptedAnswer": { "@type": "Answer", "text": f.a }
+            }))
+          }
+        ]}
       />
       <Navbar />
 
@@ -371,11 +405,13 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left */}
             <div>
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold leading-[1.05] tracking-tight text-foreground">
+              {/* Hidden H1 for crawlers — the visible heading uses a rotating animation Google can't reliably read */}
+              <h1 className="sr-only">IT Contract Jobs UK — Find Your Next IT Contract</h1>
+              <p aria-hidden="true" className="text-4xl md:text-6xl lg:text-7xl font-heading font-bold leading-[1.05] tracking-tight text-foreground">
                 Find your next<br />
                 <RotatingText /><br />
                 contract now
-              </h1>
+              </p>
               <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
                 The{" "}
                 <span className="relative inline-block text-foreground font-semibold">
@@ -753,14 +789,46 @@ const Index = () => {
       <section className="container py-24 max-w-2xl">
         <div className="text-center mb-12">
           <Badge variant="secondary" className="mb-4 text-xs uppercase tracking-widest font-semibold">FAQ</Badge>
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">Common questions</h2>
+          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground">Common questions about IT contracting</h2>
         </div>
         <div className="space-y-3">
           {faqs.map((faq) => <FaqItem key={faq.q} faq={faq} />)}
         </div>
       </section>
 
-      {/* ── 10. FINAL CTA — dark ─────────────────────────── */}
+      {/* ── 10. ABOUT — for crawlers & AI engines ────────── */}
+      <section className="border-t bg-surface-subtle py-16">
+        <div className="container max-w-3xl">
+          <h2 className="font-heading font-bold text-2xl text-foreground mb-4">About IT ContractHub</h2>
+          <div className="prose prose-sm prose-neutral max-w-none text-muted-foreground leading-relaxed space-y-3">
+            <p>
+              IT ContractHub is the UK's dedicated IT contract job board, aggregating thousands of IT contract jobs
+              from hundreds of sources — updated every 10 minutes. Whether you're searching for Python, AWS, Azure,
+              DevOps, Java, Data Engineering, Salesforce, or SAP contracts, IT ContractHub surfaces the latest
+              opportunities before they appear anywhere else.
+            </p>
+            <p>
+              Unlike traditional job boards, IT ContractHub provides the direct email address of the recruiter or
+              hiring manager behind every contract posting. This means UK IT contractors can skip impersonal
+              applicant tracking systems (ATS) and reach decision makers directly — dramatically improving response
+              rates and time-to-placement.
+            </p>
+            <p>
+              Our platform supports both inside IR35 and outside IR35 contract roles across the United Kingdom,
+              including London, Manchester, Edinburgh, Birmingham, Bristol, Leeds, and fully remote positions.
+              Roles span all major IT disciplines: software engineering, cloud infrastructure, cybersecurity,
+              data science, DevOps, networking, ERP, and more.
+            </p>
+            <p>
+              IT ContractHub Pro members receive instant email alerts for new contracts matching their skills,
+              AI-generated cover letters tailored to each role, and a full application tracker. Free users can
+              browse all contract listings without signing in.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 11. FINAL CTA — dark ─────────────────────────── */}
       <section className="bg-surface-subtle border-t py-28 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[400px] w-[700px] rounded-full bg-primary/15 blur-[100px]" />

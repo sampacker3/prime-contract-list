@@ -22,6 +22,10 @@ const PAGE_SIZE = 25;
 const PRO_CUTOFF_MS = 72 * 60 * 60 * 1000;
 const getProCutoff = () => new Date(Date.now() - PRO_CUTOFF_MS).toISOString();
 
+// Hide contracts older than 90 days from all users
+const MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+const get90DayCutoff = () => new Date(Date.now() - MAX_AGE_MS).toISOString();
+
 function applySearchFilters(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query: any,
@@ -65,9 +69,10 @@ function useContracts(search: string, location: string, page: number, ir35: "all
         .from("LinkedinScrapeResults")
         .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
-        .range(from, to);
+        .range(from, to)
+        .gte("created_at", get90DayCutoff());
 
-      // Free users only see contracts older than 48 hours
+      // Free users only see contracts older than 72 hours
       if (!isPro) query = query.lt("created_at", getProCutoff());
 
       query = applySearchFilters(query, search, location, ir35, date, cvSkills);
@@ -87,7 +92,8 @@ function useHiddenCount(search: string, location: string, ir35: "all" | "outside
       let query = supabase
         .from("LinkedinScrapeResults")
         .select("id", { count: "exact", head: true })
-        .gte("created_at", getProCutoff());
+        .gte("created_at", getProCutoff())
+        .gte("created_at", get90DayCutoff());
 
       query = applySearchFilters(query, search, location, ir35, "all", cvSkills);
 
